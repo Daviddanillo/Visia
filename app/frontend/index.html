@@ -661,6 +661,7 @@ input,select,textarea{font-family:inherit;outline:none}
                 <option value="30" selected>30 dias</option>
                 <option value="60">60 dias</option>
                 <option value="90">90 dias</option>
+                <option value="180">180 dias</option>
               </select>
             </div>
             <button class="btn btn-accent" id="btn-prever" onclick="gerarPrevisao()" style="align-self:flex-end;padding:10px 22px">
@@ -1303,6 +1304,7 @@ function renderChartSemana(d) {
     name: 'Efeito'
   }],
   { ...LB,
+    xaxis: { ...LB.xaxis, type: 'category' },
     yaxis: { ...LB.yaxis, zeroline: true, zerolinecolor: 'rgba(255,255,255,.3)', zerolinewidth: 2, title: { text: 'Efeito nas Vendas (R$)', font: { size: 12 } }, range: [-ymax, ymax] },
     title: { text: 'Efeito por Dia da Semana', font: { size: 14, color: '#ddd' }, x: 0.01 },
     showlegend: false, bargap: 0.35
@@ -1323,7 +1325,7 @@ function renderChartAnual(d) {
       hovertemplate: '<b>%{x}</b><br>Efeito: R$ %{y:+,.2f}<extra></extra>',
       name: 'Efeito mensal' },
     { x: meses, y: vals, type: 'scatter', mode: 'lines+markers', line: { color: 'rgba(255,255,255,.7)', width: 2.5, shape: 'spline', smoothing: 0.4 }, marker: { color: '#fff', size: 8, line: { color: vals.map(v => v >= 0 ? '#c8f060' : '#ff5272'), width: 2.5 } }, hoverinfo: 'skip', showlegend: false },
-  ], { ...LB, yaxis: { ...LB.yaxis, zeroline: true, zerolinecolor: 'rgba(255,255,255,.3)', zerolinewidth: 2, title: { text: 'Efeito (R$)', font: { size: 12 } }, range: [-ymax, ymax] }, title: { text: 'Sazonalidade Anual por Mês', font: { size: 14, color: '#ddd' }, x: 0.01 }, showlegend: false, bargap: 0.25 }, CFG);
+  ], { ...LB, xaxis: { ...LB.xaxis, type: 'category' }, yaxis: { ...LB.yaxis, zeroline: true, zerolinecolor: 'rgba(255,255,255,.3)', zerolinewidth: 2, title: { text: 'Efeito (R$)', font: { size: 12 } }, range: [-ymax, ymax] }, title: { text: 'Sazonalidade Anual por Mês', font: { size: 14, color: '#ddd' }, x: 0.01 }, showlegend: false, bargap: 0.25 }, CFG);
 }
 
 function renderTabela(d) {
@@ -1510,7 +1512,7 @@ function renderAcuracia(d) {
       legend: { ...LB.legend, y: -0.3 },
       margin: { ...LB.margin, t: 32, b: 60 },
       title:  { text: 'Erro por Horizonte de Previsão', font: { size: 13, color: '#ddd' }, x: 0.5, xanchor: 'center' },
-      xaxis:  { ...LB.xaxis, title: { text: 'Dias à frente', font: { size: 11 } } },
+      xaxis:  { ...LB.xaxis, type: 'linear', title: { text: 'Dias à frente', font: { size: 11 } } },
     }, CFG);
   } else {
     const chartEl = document.getElementById('chart-acuracia-horizonte');
