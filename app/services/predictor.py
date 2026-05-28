@@ -176,17 +176,13 @@ def _extrair_changepoints(model: Prophet) -> list:
     try:
         deltas = model.params["delta"].mean(axis=0)
         cp_df  = pd.DataFrame({"ds": model.changepoints.values, "delta": deltas})
-        cp_df  = cp_df[cp_df["delta"].abs() > 0.005]
-        if cp_df.empty:
+        cp_df  = cp_df.assign(abs_delta=cp_df["delta"].abs())
+        if cp_df.empty or cp_df["abs_delta"].max() == 0:
             return []
-        cp_df = (
-            cp_df
-            .assign(abs_delta=cp_df["delta"].abs())
-            .sort_values("abs_delta", ascending=False)
-            .head(8)
-            .drop("abs_delta", axis=1)
-            .sort_values("ds")
-        )
+        # Top 8 por magnitude, depois filtra os que têm < 20% do delta máximo (ruído)
+        cp_df = cp_df.sort_values("abs_delta", ascending=False).head(8)
+        min_rel = cp_df["abs_delta"].max() * 0.20
+        cp_df = cp_df[cp_df["abs_delta"] >= min_rel].drop("abs_delta", axis=1).sort_values("ds")
         return [
             {
                 "ds":    row["ds"].strftime("%Y-%m-%d"),
@@ -327,23 +323,32 @@ def gerar_previsao(
     lower_arr = np.maximum(future_fc["yhat_lower"].values.astype(float), 0)
     upper_arr = future_fc["yhat_upper"].values.astype(float)
 
-    # Média móvel de 7 dias usada para detectar alertas de alta/queda
-    rolling_7 = pd.Series(yhat_arr).rolling(7, center=True, min_periods=1).mean().values
+    # ── Limiares de alerta baseados em percentis (funciona para previsões suaves e voláteis) ──
+    positive_yhats = yhat_arr[yhat_arr > 0]
+    if len(positive_yhats) >= 4:
+        median_yhat = float(np.median(positive_yhats))
+        p25 = float(np.percentile(positive_yhats, 25))
+        p75 = float(np.percentile(positive_yhats, 75))
+    else:
+        median_yhat = float(np.mean(yhat_arr)) if len(yhat_arr) > 0 else 0.0
+        p25 = median_yhat * 0.8
+        p75 = median_yhat * 1.2
+    # Ignora dias com valor próximo de zero (artefacto do clip para 0)
+    min_yhat = median_yhat * 0.05
 
     forecast_list = []
     for i, row in enumerate(future_fc.itertuples()):
         ds_str = row.ds.strftime("%Y-%m-%d")
         yhat   = float(yhat_arr[i])
-        roll   = float(rolling_7[i])
 
         alert_type = None
         alert_pct  = None
-        if roll > 0:
-            pct = (yhat - roll) / roll * 100
-            if pct <= -20:
-                alert_type, alert_pct = "queda", round(pct, 1)
-            elif pct >= 25:
+        if yhat >= min_yhat and median_yhat > 0:
+            pct = (yhat - median_yhat) / median_yhat * 100
+            if yhat >= p75:
                 alert_type, alert_pct = "alta", round(pct, 1)
+            elif yhat <= p25:
+                alert_type, alert_pct = "queda", round(pct, 1)
 
         feriado = feriados_lookup.get(ds_str)
         forecast_list.append({
@@ -358,6 +363,47 @@ def gerar_previsao(
             "alert_type":   alert_type,
             "alert_pct":    alert_pct,
         })
+
+    # ── Deduplica alertas consecutivos: mantém só o mais extremo em janelas de 7 dias ──
+    for atype in ("alta", "queda"):
+        idxs = [i for i, f in enumerate(forecast_list) if f["alert_type"] == atype]
+        to_remove: set = set()
+        seen: set = set()
+        for i in idxs:
+            if i in seen:
+                continue
+            base_ds = pd.Timestamp(forecast_list[i]["ds"])
+            group = [
+                j for j in idxs
+                if j not in seen
+                and abs((pd.Timestamp(forecast_list[j]["ds"]) - base_ds).days) < 7
+            ]
+            for j in group:
+                seen.add(j)
+            if len(group) > 1:
+                best = (
+                    max(group, key=lambda j: forecast_list[j]["yhat"]) if atype == "alta"
+                    else min(group, key=lambda j: forecast_list[j]["yhat"])
+                )
+                for j in group:
+                    if j != best:
+                        to_remove.add(j)
+        for i in to_remove:
+            forecast_list[i]["alert_type"] = None
+            forecast_list[i]["alert_pct"] = None
+
+    # ── Limita a 5 alertas de cada tipo (os mais extremos) ──
+    for atype in ("alta", "queda"):
+        alert_idxs = [i for i, f in enumerate(forecast_list) if f["alert_type"] == atype]
+        if len(alert_idxs) > 5:
+            if atype == "alta":
+                keep = set(sorted(alert_idxs, key=lambda i: forecast_list[i]["yhat"], reverse=True)[:5])
+            else:
+                keep = set(sorted(alert_idxs, key=lambda i: forecast_list[i]["yhat"])[:5])
+            for i in alert_idxs:
+                if i not in keep:
+                    forecast_list[i]["alert_type"] = None
+                    forecast_list[i]["alert_pct"] = None
 
     # ---- Nome do arquivo ----
     nome_arquivo = "Todos os dados"

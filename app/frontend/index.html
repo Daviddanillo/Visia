@@ -1033,9 +1033,9 @@ async function gerarPrevisao() {
     if (!r.ok) throw new Error(extrairErro(d, 'Erro ao gerar previsão.'));
     state.dadosPrevisao = d;
     state.chartsRendered = new Set();
-    renderizarPrevisao(d);
     document.getElementById('prev-resultado').style.display = 'block';
     document.getElementById('btn-exportar').style.display   = 'inline-flex';
+    renderizarPrevisao(d);
   } catch (e) {
     toast('Erro: ' + e.message, 'error');
     document.getElementById('prev-empty').style.display = 'block';
@@ -1085,7 +1085,14 @@ function renderizarPrevisao(d) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-principal').classList.add('active');
   document.querySelector('.tab-btn').classList.add('active');
-  requestAnimationFrame(() => { renderChartPrincipal(d); state.chartsRendered.add('principal'); });
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    renderChartPrincipal(d);
+    state.chartsRendered.add('principal');
+    setTimeout(() => {
+      const el = document.getElementById('chart-principal');
+      if (el && el.data) Plotly.Plots.resize(el);
+    }, 150);
+  }));
 }
 
 function switchTab(name, btn) {
@@ -1095,12 +1102,15 @@ function switchTab(name, btn) {
   btn.classList.add('active');
   if (!state.dadosPrevisao) return;
   const d = state.dadosPrevisao;
-  requestAnimationFrame(() => {
+  requestAnimationFrame(() => requestAnimationFrame(() => {
     // Abas com gráficos Plotly: render apenas na primeira vez, depois só resize
     const plotlyTabs = { principal: 'chart-principal', tendencia: 'chart-tendencia', semana: 'chart-semana', anual: 'chart-anual', acuracia: 'chart-acuracia-horizonte' };
     if (name in plotlyTabs && state.chartsRendered.has(name)) {
       const el = document.getElementById(plotlyTabs[name]);
-      if (el && el.data) Plotly.Plots.resize(el);
+      if (el && el.data) {
+        Plotly.Plots.resize(el);
+        setTimeout(() => { if (el && el.data) Plotly.Plots.resize(el); }, 100);
+      }
       return;
     }
     if (name === 'principal') { renderChartPrincipal(d); state.chartsRendered.add('principal'); }
@@ -1109,7 +1119,7 @@ function switchTab(name, btn) {
     if (name === 'anual')     { renderChartAnual(d);     state.chartsRendered.add('anual');     }
     if (name === 'tabela')    renderTabela(d);
     if (name === 'acuracia')  { renderAcuracia(d);       state.chartsRendered.add('acuracia'); }
-  });
+  }));
 }
 
 /* ── Exportar CSV ── */
@@ -1141,8 +1151,8 @@ function exportarCSV() {
 const LB = {
   paper_bgcolor: '#141328', plot_bgcolor: '#0d0c1a',
   font: { color: '#c8c6e8', family: 'Urbanist,sans-serif', size: 12 },
-  xaxis: { gridcolor: 'rgba(255,255,255,.06)', linecolor: 'rgba(255,255,255,.12)', tickfont: { size: 11, color: '#7a78a0' }, zeroline: false },
-  yaxis: { gridcolor: 'rgba(255,255,255,.06)', linecolor: 'rgba(255,255,255,.12)', tickprefix: 'R$ ', tickformat: ',.0f', zeroline: false, tickfont: { color: '#7a78a0' } },
+  xaxis: { type: 'date', gridcolor: 'rgba(255,255,255,.06)', linecolor: 'rgba(255,255,255,.12)', tickfont: { size: 11, color: '#7a78a0' }, zeroline: false },
+  yaxis: { gridcolor: 'rgba(255,255,255,.06)', linecolor: 'rgba(255,255,255,.12)', tickprefix: 'R$ ', tickformat: ',.0f', zeroline: false, tickfont: { color: '#7a78a0' }, automargin: true },
   hovermode: 'x unified',
   hoverlabel: { bgcolor: '#1c1b38', font: { color: '#fff', family: 'Urbanist', size: 13 }, bordercolor: '#3a3860', namelength: -1 },
   margin: { l: 88, r: 24, t: 48, b: 68 },
@@ -1191,9 +1201,9 @@ function renderChartPrincipal(d) {
   ];
 
   const quedas = futFore.filter(f => f.alert_type === 'queda');
-  if (quedas.length) traces.push({ x: quedas.map(f => f.ds), y: quedas.map(f => f.yhat), mode: 'markers', name: 'Alerta de Queda', marker: { color: '#ff5272', size: 14, symbol: 'triangle-down', line: { color: '#fff', width: 1.5 } }, hovertemplate: '<b>⚠ Queda %{customdata}%</b><br>R$ %{y:,.0f}<extra>Queda</extra>', customdata: quedas.map(f => f.alert_pct) });
+  if (quedas.length) traces.push({ x: quedas.map(f => f.ds), y: quedas.map(f => f.yhat), mode: 'markers', name: 'Alerta de Queda', cliponaxis: false, marker: { color: '#ff5272', size: 11, symbol: 'triangle-down', line: { color: '#fff', width: 1.5 } }, hovertemplate: '<b>⚠ Queda %{customdata}%</b><br>R$ %{y:,.0f}<extra>Queda</extra>', customdata: quedas.map(f => f.alert_pct) });
   const altas  = futFore.filter(f => f.alert_type === 'alta');
-  if (altas.length) traces.push({ x: altas.map(f => f.ds), y: altas.map(f => f.yhat), mode: 'markers', name: 'Pico de Vendas', marker: { color: '#27c984', size: 14, symbol: 'triangle-up', line: { color: '#fff', width: 1.5 } }, hovertemplate: '<b>🔝 Alta +%{customdata}%</b><br>R$ %{y:,.0f}<extra>Pico</extra>', customdata: altas.map(f => Math.abs(f.alert_pct)) });
+  if (altas.length) traces.push({ x: altas.map(f => f.ds), y: altas.map(f => f.yhat), mode: 'markers', name: 'Pico de Vendas', cliponaxis: false, marker: { color: '#27c984', size: 11, symbol: 'triangle-up', line: { color: '#fff', width: 1.5 } }, hovertemplate: '<b>🔝 Alta +%{customdata}%</b><br>R$ %{y:,.0f}<extra>Pico</extra>', customdata: altas.map(f => Math.abs(f.alert_pct)) });
   const ferias = futFore.filter(f => f.is_holiday);
   if (ferias.length) traces.push({ x: ferias.map(f => f.ds), y: ferias.map(f => f.yhat), mode: 'markers', name: 'Feriado', marker: { color: '#ffd060', size: 12, symbol: 'diamond', line: { color: '#fff', width: 1.5 } }, hovertemplate: '🗓 %{customdata}<br>R$ %{y:,.0f}<extra>Feriado</extra>', customdata: ferias.map(f => f.holiday_name) });
 
