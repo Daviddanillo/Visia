@@ -13,6 +13,7 @@ from app.models.usuario import Usuario
 from app.models.venda import UploadArquivo, Venda
 from app.schemas.venda import (
     ArquivoResposta,
+    CategoriaResposta,
     ImportacaoResposta,
     StatsResposta,
     VendaAtualizar,
@@ -29,11 +30,40 @@ _SINONIMOS_DATA = {
 }
 _SINONIMOS_VALOR = {
     "price", "payment_value", "valor", "venda", "vendas", "y", "total", "preco",
+    "faturamento", "receita", "amount", "revenue", "monto",
+}
+# Categoria / produto vendido (flor, chocolate, etc.)
+_SINONIMOS_CATEGORIA = {
+    "categoria", "category", "produto", "product", "item", "tipo", "type",
+    "nome_produto", "product_name", "product_category", "departamento",
+    "department", "segmento", "linha", "grupo", "setor", "sku", "descricao",
+    "description", "nome",
+}
+# Quantidade vendida — usada como peso quando não há coluna de valor monetário
+_SINONIMOS_QUANTIDADE = {
+    "quantidade", "qtd", "qtde", "quantity", "qty", "unidades", "units", "volume",
 }
 
+# Sinônimos que NÃO devem ser confundidos com categoria (identificadores, etc.)
+_BLOQUEIO_CATEGORIA = {"order_id", "customer_id", "id_", "_id", "cpf", "cnpj"}
 
-def _detectar_coluna(colunas: list, sinonimos: set) -> Optional[str]:
-    return next((c for c in colunas if any(s in c for s in sinonimos)), None)
+
+def _detectar_coluna(
+    colunas: list,
+    sinonimos: set,
+    bloqueio: Optional[set] = None,
+    excluir: Optional[set] = None,
+) -> Optional[str]:
+    bloqueio = bloqueio or set()
+    excluir  = excluir or set()
+    for c in colunas:
+        if c in excluir:
+            continue
+        if any(b in c for b in bloqueio):
+            continue
+        if any(s in c for s in sinonimos):
+            return c
+    return None
 
 
 def _limpar_valor(serie: pd.Series) -> pd.Series:
@@ -77,6 +107,40 @@ def deletar_arquivo(
         raise HTTPException(status_code=404, detail="Arquivo não encontrado.")
     db.delete(arquivo)
     db.commit()
+
+
+# ── Categorias (definido antes de /{venda_id}) ───────────────────────────────
+
+@router.get("/categorias", response_model=List[CategoriaResposta])
+def listar_categorias(
+    arquivo_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    """Lista as categorias/produtos distintos do usuário, com volume agregado."""
+    query = db.query(Venda).filter(
+        Venda.usuario_id == usuario.id,
+        Venda.categoria.isnot(None),
+    )
+    if arquivo_id is not None:
+        query = query.filter(Venda.arquivo_id == arquivo_id)
+
+    agregados: dict = {}
+    for v in query.all():
+        cat = v.categoria
+        if cat not in agregados:
+            agregados[cat] = {"total_registros": 0, "total_valor": 0.0}
+        agregados[cat]["total_registros"] += 1
+        agregados[cat]["total_valor"] += float(v.valor or 0)
+
+    return [
+        CategoriaResposta(
+            categoria=cat,
+            total_registros=d["total_registros"],
+            total_valor=round(d["total_valor"], 2),
+        )
+        for cat, d in sorted(agregados.items(), key=lambda kv: kv[1]["total_valor"], reverse=True)
+    ]
 
 
 # ── Stats (definido antes de /{venda_id}) ────────────────────────────────────
@@ -132,28 +196,66 @@ async def importar_csv(
         raise HTTPException(status_code=400, detail="O arquivo está vazio.")
 
     df.columns = [str(c).strip().lower().replace('"', "").replace("'", "") for c in df.columns]
-    col_data  = _detectar_coluna(df.columns.tolist(), _SINONIMOS_DATA)
-    col_valor = _detectar_coluna(df.columns.tolist(), _SINONIMOS_VALOR)
+    cols = df.columns.tolist()
+    # A coluna de data é detectada primeiro e excluída das demais buscas — assim
+    # nomes como "data_venda" não são confundidos com a coluna de valor ("venda").
+    col_data       = _detectar_coluna(cols, _SINONIMOS_DATA)
+    ja_usadas      = {col_data} if col_data else set()
+    col_valor      = _detectar_coluna(cols, _SINONIMOS_VALOR, excluir=ja_usadas)
+    if col_valor:
+        ja_usadas = ja_usadas | {col_valor}
+    col_quantidade = _detectar_coluna(cols, _SINONIMOS_QUANTIDADE, excluir=ja_usadas)
+    if col_quantidade:
+        ja_usadas = ja_usadas | {col_quantidade}
+    col_categoria  = _detectar_coluna(
+        cols, _SINONIMOS_CATEGORIA, bloqueio=_BLOQUEIO_CATEGORIA, excluir=ja_usadas
+    )
 
     trabalho = pd.DataFrame()
     trabalho["data_venda"] = (
         pd.to_datetime(df[col_data], errors="coerce").dt.date
         if col_data else datetime.now().date()
     )
+
+    # ── Valor: prioriza coluna monetária; senão usa quantidade; senão peso unitário ──
     if col_valor:
         trabalho["valor"] = (
             _limpar_valor(df[col_valor])
             if df[col_valor].dtype == object
             else pd.to_numeric(df[col_valor], errors="coerce")
         )
+    elif col_quantidade:
+        logger.info("Sem coluna de valor; usando quantidade '%s' como métrica.", col_quantidade)
+        trabalho["valor"] = pd.to_numeric(df[col_quantidade], errors="coerce")
     else:
         logger.warning("Coluna de valor não detectada. Usando peso unitário 1.0 por linha.")
         trabalho["valor"] = 1.0
 
+    # ── Categoria: opcional. Se ausente, o sistema funciona só com números ──
+    tem_categorias = col_categoria is not None
+    if tem_categorias:
+        trabalho["categoria"] = (
+            df[col_categoria].astype(str).str.strip().replace({"": None, "nan": None})
+        )
+    else:
+        trabalho["categoria"] = None
+
     trabalho["data_venda"] = trabalho["data_venda"].fillna(datetime.now().date())
     trabalho["valor"]      = trabalho["valor"].fillna(0.0)
 
-    consolidado = trabalho.groupby("data_venda")["valor"].sum().reset_index()
+    # ── Consolida por dia (+ categoria, quando houver) ──
+    if tem_categorias:
+        trabalho["categoria"] = trabalho["categoria"].fillna("Sem categoria")
+        consolidado = (
+            trabalho.groupby(["data_venda", "categoria"])["valor"].sum().reset_index()
+        )
+        categorias_detectadas = sorted(
+            c for c in consolidado["categoria"].unique() if c and c != "Sem categoria"
+        )[:50]
+    else:
+        consolidado = trabalho.groupby("data_venda")["valor"].sum().reset_index()
+        consolidado["categoria"] = None
+        categorias_detectadas = []
 
     arquivo = UploadArquivo(
         nome_arquivo=file.filename,
@@ -169,6 +271,7 @@ async def importar_csv(
             {
                 "data_venda": row.data_venda,
                 "valor":      float(row.valor),
+                "categoria":  row.categoria,
                 "usuario_id": usuario.id,
                 "arquivo_id": arquivo.id,
             }
@@ -177,11 +280,23 @@ async def importar_csv(
     )
     db.commit()
 
+    if tem_categorias:
+        msg = (
+            f"'{file.filename}' importado com sucesso — "
+            f"{len(categorias_detectadas)} categoria(s) detectada(s)."
+        )
+    else:
+        msg = f"'{file.filename}' importado com sucesso (sem categorias)."
+
     return ImportacaoResposta(
         status="sucesso",
-        mensagem=f"'{file.filename}' importado com sucesso.",
+        mensagem=msg,
         registros_afetados=len(consolidado),
         arquivo_id=arquivo.id,
+        tem_categorias=tem_categorias,
+        categorias_detectadas=categorias_detectadas,
+        coluna_valor_detectada=col_valor or col_quantidade,
+        coluna_categoria_detectada=col_categoria,
     )
 
 
@@ -232,7 +347,12 @@ def criar_venda(
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
 ):
-    venda = Venda(data_venda=dados.data_venda, valor=dados.valor, usuario_id=usuario.id)
+    venda = Venda(
+        data_venda=dados.data_venda,
+        valor=dados.valor,
+        categoria=(dados.categoria.strip() or None) if dados.categoria else None,
+        usuario_id=usuario.id,
+    )
     db.add(venda)
     db.commit()
     db.refresh(venda)
@@ -273,6 +393,8 @@ def atualizar_venda(
         venda.data_venda = dados.data_venda
     if dados.valor is not None:
         venda.valor = dados.valor
+    if dados.categoria is not None:
+        venda.categoria = dados.categoria.strip() or None
     db.commit()
     db.refresh(venda)
     return venda

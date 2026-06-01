@@ -7,11 +7,13 @@ from pydantic import BaseModel, Field
 class VendaCriar(BaseModel):
     data_venda: date
     valor: float = Field(..., gt=0, description="Valor da venda em R$")
+    categoria: Optional[str] = Field(None, description="Categoria/produto da venda")
 
 
 class VendaAtualizar(BaseModel):
     data_venda: Optional[date] = None
     valor: Optional[float] = Field(None, gt=0)
+    categoria: Optional[str] = None
 
 
 class VendaResposta(BaseModel):
@@ -19,9 +21,16 @@ class VendaResposta(BaseModel):
     usuario_id: int
     data_venda: date
     valor: float
+    categoria: Optional[str] = None
     arquivo_id: Optional[int] = None
 
     model_config = {"from_attributes": True}
+
+
+class CategoriaResposta(BaseModel):
+    categoria: str
+    total_registros: int
+    total_valor: float
 
 
 class ArquivoResposta(BaseModel):
@@ -37,6 +46,10 @@ class ImportacaoResposta(BaseModel):
     mensagem: str
     registros_afetados: int
     arquivo_id: int
+    tem_categorias: bool = False
+    categorias_detectadas: list[str] = []
+    coluna_valor_detectada: Optional[str] = None
+    coluna_categoria_detectada: Optional[str] = None
 
 
 class StatsResposta(BaseModel):

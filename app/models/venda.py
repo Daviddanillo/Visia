@@ -22,6 +22,9 @@ class Venda(Base):
     id = Column(Integer, primary_key=True, index=True)
     data_venda = Column(Date, nullable=False)
     valor = Column(Float, nullable=False)
+    # Categoria/produto da venda (ex.: "Chocolate", "Flores").
+    # Nullable → arquivos que só têm números continuam funcionando normalmente.
+    categoria = Column(String, nullable=True, index=True)
     usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
     arquivo_id = Column(Integer, ForeignKey("uploads_arquivos.id"), nullable=True)
 

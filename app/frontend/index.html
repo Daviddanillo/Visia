@@ -416,6 +416,70 @@ input,select,textarea{font-family:inherit;outline:none}
 }
 .cp-chip-label{font-weight:700;font-size:.88rem}
 .cp-chip-date{font-size:.75rem;color:var(--text-muted);margin-top:1px}
+
+/* ═══════════════════════════════════════
+   CATEGORIAS
+═══════════════════════════════════════ */
+.cat-highlight-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:22px}
+.cat-highlight{
+  background:linear-gradient(135deg,var(--surface) 0%,var(--surface2) 100%);
+  border:1px solid var(--border);border-radius:var(--radius);
+  padding:18px 18px;position:relative;overflow:hidden
+}
+.cat-highlight::before{content:'';position:absolute;top:0;left:0;width:4px;bottom:0;background:var(--ch-color,var(--accent))}
+.cat-highlight-label{font-size:.72rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.cat-highlight-name{font-size:1.3rem;font-weight:800;color:var(--ch-color,var(--accent))}
+.cat-highlight-sub{font-size:.78rem;color:var(--text-muted);margin-top:4px}
+
+.cat-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:24px}
+.cat-card{
+  background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);
+  padding:18px 20px;transition:border-color var(--trans),transform var(--trans)
+}
+.cat-card:hover{border-color:var(--cc-color,var(--accent));transform:translateY(-2px)}
+.cat-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.cat-card-name{font-size:1.02rem;font-weight:800;display:flex;align-items:center;gap:9px}
+.cat-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0;background:var(--cc-color,var(--accent));box-shadow:0 0 10px var(--cc-color,var(--accent))}
+.cat-trend{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:99px;font-size:.8rem;font-weight:700}
+.cat-trend.up{background:var(--success-dim);color:var(--success)}
+.cat-trend.down{background:var(--danger-dim);color:var(--danger)}
+.cat-trend.flat{background:var(--surface3);color:var(--text-muted)}
+.cat-metrics{display:flex;gap:18px;margin-bottom:12px}
+.cat-metric .cm-val{font-size:1.05rem;font-weight:800}
+.cat-metric .cm-lbl{font-size:.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
+.cat-spark{height:46px;width:100%}
+.cat-insights{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+.cat-insight{
+  display:flex;align-items:flex-start;gap:8px;font-size:.8rem;color:var(--text-soft);
+  padding:7px 10px;background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);line-height:1.4
+}
+.cat-insight .ci-icon{flex-shrink:0;font-size:.9rem;margin-top:1px}
+.cat-insight.up{border-left:3px solid var(--success)}
+.cat-insight.down{border-left:3px solid var(--danger)}
+
+.insight-feed{display:flex;flex-direction:column;gap:9px}
+.insight-row{
+  display:flex;align-items:center;gap:12px;padding:12px 16px;
+  background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);
+  transition:border-color var(--trans)
+}
+.insight-row:hover{border-color:var(--border2)}
+.insight-row.up{border-left:4px solid var(--success)}
+.insight-row.down{border-left:4px solid var(--danger)}
+.insight-badge{
+  width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+  font-size:1.1rem;flex-shrink:0
+}
+.insight-row.up .insight-badge{background:var(--success-dim);color:var(--success)}
+.insight-row.down .insight-badge{background:var(--danger-dim);color:var(--danger)}
+.insight-main{flex:1;min-width:0}
+.insight-cat{font-size:.92rem;font-weight:700}
+.insight-desc{font-size:.78rem;color:var(--text-muted);margin-top:2px}
+.insight-pct{font-size:1.05rem;font-weight:800;flex-shrink:0}
+.insight-row.up .insight-pct{color:var(--success)}
+.insight-row.down .insight-pct{color:var(--danger)}
+.insight-date{font-size:.78rem;color:var(--text-soft);font-weight:600;white-space:nowrap;flex-shrink:0;text-align:right}
+@media (max-width:900px){.cat-cards,.cat-highlight-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -571,14 +635,14 @@ input,select,textarea{font-family:inherit;outline:none}
             <div class="dropzone" id="dropzone" onclick="document.getElementById('input-csv').click()" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropFile(event)">
               <div class="dropzone-icon">📊</div>
               <p><strong>Clique para selecionar</strong> ou arraste o arquivo aqui</p>
-              <p style="margin-top:6px;font-size:.78rem">Formato .csv — colunas de data e valor detectadas automaticamente</p>
+              <p style="margin-top:6px;font-size:.78rem">Formato .csv — data, valor e <strong style="color:var(--accent)">categoria/produto</strong> detectados automaticamente</p>
             </div>
             <input type="file" id="input-csv" accept=".csv" onchange="uploadCSV(this.files[0])"/>
             <div class="upload-progress" id="upload-progress"><div class="upload-progress-bar" id="upload-bar"></div></div>
             <div class="divider"></div>
             <div class="callout">
               <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-              Aceita arquivos de Excel, ERPs, e-commerces e PDVs. O sistema detecta automaticamente as colunas de data e valor.
+              Aceita arquivos de Excel, ERPs, e-commerces e PDVs. O sistema se adapta: funciona com planilhas só de números <strong>ou</strong> com colunas de categoria/produto, gerando previsões por item.
             </div>
           </div>
           <div class="card">
@@ -593,6 +657,11 @@ input,select,textarea{font-family:inherit;outline:none}
             <div class="form-group">
               <label>Valor (R$)</label>
               <input type="number" id="inp-valor" placeholder="0,00" step="0.01" min="0.01"/>
+            </div>
+            <div class="form-group">
+              <label>Categoria / Produto <span style="color:var(--text-muted);text-transform:none;font-weight:400">(opcional)</span></label>
+              <input type="text" id="inp-categoria" placeholder="Ex.: Chocolate, Flores..." list="datalist-categorias"/>
+              <datalist id="datalist-categorias"></datalist>
             </div>
             <button class="btn btn-accent" style="width:100%;margin-top:4px;justify-content:center" onclick="inserirManual()">
               <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -650,9 +719,13 @@ input,select,textarea{font-family:inherit;outline:none}
 
         <div class="card" style="margin-bottom:24px">
           <div class="prev-controls">
-            <div class="form-group" style="flex:1;min-width:220px;margin-bottom:0">
+            <div class="form-group" style="flex:1;min-width:200px;margin-bottom:0">
               <label>Base de dados</label>
-              <select id="sel-arquivo"><option value="">Carregando...</option></select>
+              <select id="sel-arquivo" onchange="carregarCategoriasSelect()"><option value="">Carregando...</option></select>
+            </div>
+            <div class="form-group" id="grp-categoria" style="margin-bottom:0;min-width:180px;display:none">
+              <label>Categoria / Produto</label>
+              <select id="sel-categoria"><option value="">Todas as categorias</option></select>
             </div>
             <div class="form-group" style="margin-bottom:0">
               <label>Horizonte de previsão</label>
@@ -708,6 +781,7 @@ input,select,textarea{font-family:inherit;outline:none}
           <div class="card">
             <div class="tabs-header">
               <button class="tab-btn active" onclick="switchTab('principal',this)">📈 Previsão</button>
+              <button class="tab-btn" onclick="switchTab('categorias',this)">🏷️ Categorias</button>
               <button class="tab-btn" onclick="switchTab('tendencia',this)">📉 Tendência</button>
               <button class="tab-btn" onclick="switchTab('semana',this)">📅 Por Dia</button>
               <button class="tab-btn" onclick="switchTab('anual',this)">🗓 Por Mês</button>
@@ -715,6 +789,9 @@ input,select,textarea{font-family:inherit;outline:none}
               <button class="tab-btn" onclick="switchTab('acuracia',this)">📊 Acurácia</button>
             </div>
             <div id="tab-principal" class="tab-pane active"><div id="chart-principal" class="chart-wrap"></div></div>
+            <div id="tab-categorias" class="tab-pane">
+              <div id="categorias-content"></div>
+            </div>
             <div id="tab-tendencia" class="tab-pane">
               <div id="chart-tendencia" class="chart-wrap"></div>
               <div id="cp-lista-wrap" style="margin-top:16px"></div>
@@ -801,7 +878,7 @@ function navTo(page) {
   document.getElementById('page-' + page).classList.add('active');
   document.querySelector(`.nav-item[data-page="${page}"]`).classList.add('active');
   if (page === 'dashboard') carregarDashboard();
-  if (page === 'dados')   { carregarTabelaArquivos(); carregarVendasManuais(); }
+  if (page === 'dados')   { carregarTabelaArquivos(); carregarVendasManuais(); carregarVendasDatalist(); }
   if (page === 'previsao')  carregarArquivosSelect();
 }
 
@@ -934,8 +1011,13 @@ async function uploadCSV(file) {
     bar.style.width = '100%';
     setTimeout(() => { prog.style.display = 'none'; bar.style.width = '0'; }, 800);
     if (!r.ok) throw new Error(extrairErro(d, 'Erro ao importar.'));
-    toast(`${d.registros_afetados} registros importados — Lote #${d.arquivo_id}`, 'success');
+    if (d.tem_categorias) {
+      toast(`${d.registros_afetados} registros — ${d.categorias_detectadas.length} categoria(s) detectada(s) 🏷️`, 'success');
+    } else {
+      toast(`${d.registros_afetados} registros importados — Lote #${d.arquivo_id}`, 'success');
+    }
     carregarTabelaArquivos();
+    carregarVendasDatalist();
     carregarDashboard();
   } catch (e) {
     clearInterval(iv);
@@ -946,18 +1028,22 @@ async function uploadCSV(file) {
 }
 
 async function inserirManual() {
-  const data  = document.getElementById('inp-data-venda').value;
-  const valor = parseFloat(document.getElementById('inp-valor').value);
+  const data      = document.getElementById('inp-data-venda').value;
+  const valor     = parseFloat(document.getElementById('inp-valor').value);
+  const categoria = document.getElementById('inp-categoria').value.trim();
   if (!data || isNaN(valor) || valor <= 0) { toast('Preencha data e valor válidos.', 'error'); return; }
   try {
+    const body = { data_venda: data, valor };
+    if (categoria) body.categoria = categoria;
     const r = await authFetch('/vendas/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data_venda: data, valor }),
+      body: JSON.stringify(body),
     });
     if (!r.ok) throw new Error((await r.json()).detail);
     toast('Venda registrada com sucesso!', 'success');
-    document.getElementById('inp-valor').value = '';
+    document.getElementById('inp-valor').value     = '';
+    document.getElementById('inp-categoria').value = '';
     carregarDashboard();
     carregarVendasManuais();
   } catch (e) { toast('Erro: ' + e.message, 'error'); }
@@ -1015,12 +1101,47 @@ async function carregarArquivosSelect() {
     sel.innerHTML = `<option value="">Todos os dados combinados</option>` +
       arqs.map(a => `<option value="${a.id}">#${a.id} — ${esc(a.nome_arquivo)}</option>`).join('');
   } catch (_) { sel.innerHTML = '<option>Erro ao carregar</option>'; }
+  carregarCategoriasSelect();
+}
+
+/* Carrega categorias da base selecionada; esconde o seletor se não houver. */
+async function carregarCategoriasSelect() {
+  const sel = document.getElementById('sel-categoria');
+  const grp = document.getElementById('grp-categoria');
+  if (!sel) return;
+  const arquivo = document.getElementById('sel-arquivo').value;
+  try {
+    let url = '/vendas/categorias';
+    if (arquivo) url += `?arquivo_id=${arquivo}`;
+    const r    = await authFetch(url);
+    const cats = await r.json();
+    if (!cats.length) {
+      grp.style.display = 'none';
+      sel.innerHTML = '<option value="">Todas as categorias</option>';
+      return;
+    }
+    grp.style.display = 'block';
+    sel.innerHTML = `<option value="">Todas as categorias</option>` +
+      cats.map(c => `<option value="${esc(c.categoria)}">${esc(c.categoria)} (${c.total_registros})</option>`).join('');
+  } catch (_) { grp.style.display = 'none'; }
+}
+
+/* Sugestões de categorias no formulário manual (autocomplete). */
+async function carregarVendasDatalist() {
+  const dl = document.getElementById('datalist-categorias');
+  if (!dl) return;
+  try {
+    const r    = await authFetch('/vendas/categorias');
+    const cats = await r.json();
+    dl.innerHTML = cats.map(c => `<option value="${esc(c.categoria)}">`).join('');
+  } catch (_) {}
 }
 
 async function gerarPrevisao() {
-  const arquivo = document.getElementById('sel-arquivo').value;
-  const dias    = document.getElementById('sel-dias').value;
-  const btn     = document.getElementById('btn-prever');
+  const arquivo   = document.getElementById('sel-arquivo').value;
+  const categoria = document.getElementById('sel-categoria').value;
+  const dias      = document.getElementById('sel-dias').value;
+  const btn       = document.getElementById('btn-prever');
   document.getElementById('prev-empty').style.display     = 'none';
   document.getElementById('prev-resultado').style.display = 'none';
   document.getElementById('prev-loading').style.display   = 'block';
@@ -1028,7 +1149,8 @@ async function gerarPrevisao() {
   btn.disabled = true;
   try {
     let url = `/predict/?dias=${dias}`;
-    if (arquivo) url += `&arquivo_id=${arquivo}`;
+    if (arquivo)   url += `&arquivo_id=${arquivo}`;
+    if (categoria) url += `&categoria=${encodeURIComponent(categoria)}`;
     const r = await authFetch(url);
     const d = await r.json();
     if (!r.ok) throw new Error(extrairErro(d, 'Erro ao gerar previsão.'));
@@ -1114,6 +1236,7 @@ function switchTab(name, btn) {
       }
       return;
     }
+    if (name === 'categorias') { if (!state.chartsRendered.has('categorias')) { renderCategorias(d); state.chartsRendered.add('categorias'); } else { const el = document.getElementById('chart-categorias'); if (el && el.data) Plotly.Plots.resize(el); } }
     if (name === 'principal') { renderChartPrincipal(d); state.chartsRendered.add('principal'); }
     if (name === 'tendencia') { renderChartTendencia(d); state.chartsRendered.add('tendencia'); }
     if (name === 'semana')    { renderChartSemana(d);    state.chartsRendered.add('semana');    }
@@ -1345,6 +1468,200 @@ function renderTabela(d) {
   }).join('');
 }
 
+/* ── Categorias / Produtos ── */
+const CAT_CORES = ['#c8f060','#4fc3f7','#ff8c42','#27c984','#ffd060','#b388ff','#ff5272','#5ce1e6','#f78fb3','#a0e57c'];
+
+async function renderCategorias(d) {
+  const el = document.getElementById('categorias-content');
+  if (!el) return;
+  el.innerHTML = `<div class="loading-box"><div class="spinner"></div><p>Analisando categorias e gerando previsões por produto...</p></div>`;
+  try {
+    let url = `/predict/categorias?dias=${d.dias_previstos}`;
+    if (d.arquivo_id) url += `&arquivo_id=${d.arquivo_id}`;
+    const r    = await authFetch(url);
+    const data = await r.json();
+    if (!r.ok) throw new Error(extrairErro(data, 'Erro ao analisar categorias.'));
+    state.categoriasData = data;
+
+    if (!data.disponivel) {
+      el.innerHTML = `
+        <div class="empty-state" style="padding:54px 20px">
+          <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+          <strong>Sem categorias nesta base</strong>
+          <p style="max-width:520px;margin:8px auto 0">${esc(data.motivo || 'Envie um CSV com coluna de categoria/produto.')}</p>
+        </div>`;
+      return;
+    }
+
+    const cats = data.categorias || [];
+    const res  = data.resumo || {};
+
+    // ── Cards de destaque ──
+    const destaqueCat = cats.find(c => c.categoria === res.categoria_destaque);
+    let highlights = '';
+    if (res.categoria_destaque) {
+      const up = (res.categoria_destaque_pct || 0) >= 0;
+      highlights += `
+        <div class="cat-highlight" style="--ch-color:${up?'var(--success)':'var(--danger)'}">
+          <div class="cat-highlight-label">${up?'📈 Maior crescimento':'📉 Maior variação'}</div>
+          <div class="cat-highlight-name">${esc(res.categoria_destaque)}</div>
+          <div class="cat-highlight-sub">${up?'+':''}${res.categoria_destaque_pct}% previsto vs. média histórica</div>
+        </div>`;
+    }
+    if (res.categoria_maior_volume) {
+      highlights += `
+        <div class="cat-highlight" style="--ch-color:var(--accent)">
+          <div class="cat-highlight-label">🏆 Maior volume</div>
+          <div class="cat-highlight-name">${esc(res.categoria_maior_volume)}</div>
+          <div class="cat-highlight-sub">Líder em faturamento no histórico</div>
+        </div>`;
+    }
+    if (res.categoria_queda) {
+      highlights += `
+        <div class="cat-highlight" style="--ch-color:var(--danger)">
+          <div class="cat-highlight-label">⚠️ Atenção</div>
+          <div class="cat-highlight-name">${esc(res.categoria_queda)}</div>
+          <div class="cat-highlight-sub">${res.categoria_queda_pct}% — tendência de queda</div>
+        </div>`;
+    }
+
+    // ── Cards por categoria ──
+    const cardsHtml = cats.map((c, i) => {
+      const cor = CAT_CORES[i % CAT_CORES.length];
+      const t   = c.tendencia;
+      const trendCls = t === 'alta' ? 'up' : t === 'queda' ? 'down' : 'flat';
+      const trendIco = t === 'alta' ? '▲' : t === 'queda' ? '▼' : '▬';
+      const trendTxt = `${c.variacao_pct >= 0 ? '+' : ''}${c.variacao_pct}%`;
+      const insightsHtml = (c.insights || []).slice(0, 3).map(ins => `
+        <div class="cat-insight ${ins.tipo === 'alta' ? 'up' : 'down'}">
+          <span class="ci-icon">${ins.tipo === 'alta' ? '📈' : '📉'}</span>
+          <span>${esc(ins.texto)}</span>
+        </div>`).join('') || `<div class="cat-insight" style="border-left:3px solid var(--border2);color:var(--text-muted)"><span class="ci-icon">➖</span><span>Sem variações expressivas previstas para este produto.</span></div>`;
+      return `
+        <div class="cat-card" style="--cc-color:${cor}">
+          <div class="cat-card-head">
+            <div class="cat-card-name"><span class="cat-dot"></span>${esc(c.categoria)}</div>
+            <span class="cat-trend ${trendCls}">${trendIco} ${trendTxt}</span>
+          </div>
+          <div class="cat-metrics">
+            <div class="cat-metric"><div class="cm-val" style="color:${cor}">${fmtR$(c.media_prevista)}</div><div class="cm-lbl">Média prevista/dia</div></div>
+            <div class="cat-metric"><div class="cm-val" style="color:var(--text-soft)">${fmtR$(c.media_historica)}</div><div class="cm-lbl">Média histórica</div></div>
+            <div class="cat-metric"><div class="cm-val" style="color:var(--text-soft)">${c.registros}</div><div class="cm-lbl">Registros</div></div>
+          </div>
+          <div class="cat-spark" id="cat-spark-${i}"></div>
+          <div class="cat-insights">${insightsHtml}</div>
+        </div>`;
+    }).join('');
+
+    // ── Feed de insights consolidados ──
+    const insights = data.insights || [];
+    let feedHtml = '';
+    if (insights.length) {
+      feedHtml = `
+        <div class="card" style="margin-top:4px">
+          <div class="card-title">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            Previsões por Produto — Próximos ${data.dias_previstos} dias
+          </div>
+          <div class="insight-feed">${insights.map(ins => {
+            const up = ins.tipo === 'alta';
+            return `
+              <div class="insight-row ${up?'up':'down'}">
+                <div class="insight-badge">${up?'📈':'📉'}</div>
+                <div class="insight-main">
+                  <div class="insight-cat">${esc(ins.categoria)}</div>
+                  <div class="insight-desc">${up?'Aumento previsto':'Queda prevista'} · ${ins.dia_semana}</div>
+                </div>
+                <div class="insight-pct">${up?'+':''}${ins.pct}%</div>
+                <div class="insight-date">${ins.ds_br}</div>
+              </div>`;
+          }).join('')}</div>
+        </div>`;
+    }
+
+    el.innerHTML = `
+      <div class="callout" style="margin-bottom:20px">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <span>Previsão individual para <strong>${data.total_categorias}</strong> categoria(s)/produto(s). O sistema mostra <strong>o que</strong> vai vender e <strong>quando</strong> haverá picos ou quedas — ex.: aumento de chocolate em datas específicas.</span>
+      </div>
+      ${highlights ? `<div class="cat-highlight-grid">${highlights}</div>` : ''}
+      <div class="card" style="margin-bottom:24px">
+        <div class="card-title">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Comparativo de Previsão por Categoria
+        </div>
+        <div id="chart-categorias" class="chart-wrap" style="height:420px"></div>
+      </div>
+      <div class="cat-cards">${cardsHtml}</div>
+      ${feedHtml}`;
+
+    // ── Renderiza gráfico comparativo + sparklines ──
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      renderChartCategorias(cats);
+      cats.forEach((c, i) => renderSparkline(c, i));
+    }));
+  } catch (e) {
+    el.innerHTML = `<div class="empty-state" style="padding:44px 20px"><strong>Erro ao carregar categorias</strong><p>${esc(e.message)}</p></div>`;
+  }
+}
+
+function renderChartCategorias(cats) {
+  const elId = 'chart-categorias';
+  const comDados = cats.filter(c => c.forecast && c.forecast.length);
+  if (!comDados.length) {
+    const el = document.getElementById(elId);
+    if (el) el.innerHTML = '<p style="color:var(--text-muted);padding:40px;text-align:center">Histórico insuficiente para previsão por categoria.</p>';
+    return;
+  }
+  const traces = comDados.map((c, i) => {
+    const cor = CAT_CORES[cats.indexOf(c) % CAT_CORES.length];
+    return {
+      x: c.forecast.map(f => f.ds),
+      y: c.forecast.map(f => f.yhat),
+      mode: 'lines',
+      name: c.categoria,
+      line: { color: cor, width: 2.5, shape: 'spline', smoothing: 0.5 },
+      hovertemplate: `<b>${esc(c.categoria)}</b><br>%{x|%d/%m}: R$ %{y:,.0f}<extra></extra>`,
+    };
+  });
+  Plotly.newPlot(elId, traces, {
+    ...LB,
+    margin: { ...LB.margin, t: 20, b: 60 },
+    xaxis: { ...LB.xaxis, tickformat: '%d/%m', tickangle: -30 },
+    title: { text: '', font: { size: 1 } },
+  }, CFG);
+}
+
+function renderSparkline(c, i) {
+  const elId = `cat-spark-${i}`;
+  const el = document.getElementById(elId);
+  if (!el) return;
+  if (!c.forecast || !c.forecast.length) { el.style.display = 'none'; return; }
+  const cor = CAT_CORES[i % CAT_CORES.length];
+  Plotly.newPlot(elId, [{
+    x: c.forecast.map(f => f.ds),
+    y: c.forecast.map(f => f.yhat),
+    mode: 'lines',
+    line: { color: cor, width: 2, shape: 'spline', smoothing: 0.6 },
+    fill: 'tozeroy', fillcolor: hexToRgba(cor, 0.12),
+    hoverinfo: 'skip',
+  }], {
+    paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+    margin: { l: 0, r: 0, t: 4, b: 0 },
+    xaxis: { visible: false, fixedrange: true },
+    yaxis: { visible: false, fixedrange: true },
+    showlegend: false,
+  }, { responsive: true, displayModeBar: false, staticPlot: true });
+}
+
+function hexToRgba(hex, a) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
 /* ── Utils ── */
 function extrairErro(data, fallback = 'Erro desconhecido.') {
   if (!data || !data.detail) return fallback;
@@ -1393,10 +1710,11 @@ async function carregarVendasManuais() {
       wrap.innerHTML = `<div class="empty-state"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><strong>Nenhuma venda manual cadastrada</strong><p>Use o formulário acima para inserir vendas individualmente</p></div>`;
       return;
     }
-    wrap.innerHTML = `<table class="arquivos-table"><thead><tr><th>Data</th><th>Valor</th><th>ID</th><th style="text-align:right">Ação</th></tr></thead><tbody>${
+    wrap.innerHTML = `<table class="arquivos-table"><thead><tr><th>Data</th><th>Valor</th><th>Categoria</th><th>ID</th><th style="text-align:right">Ação</th></tr></thead><tbody>${
       vendas.map(v => `<tr>
         <td style="font-weight:600">${fmtDataBR(v.data_venda)}</td>
         <td style="color:var(--accent);font-weight:700">${fmtR$(v.valor)}</td>
+        <td>${v.categoria ? `<span class="badge badge-success">${esc(v.categoria)}</span>` : '<span style="color:var(--text-muted)">—</span>'}</td>
         <td><span class="badge badge-muted">#${v.id}</span></td>
         <td style="text-align:right">
           <button class="btn btn-danger btn-sm btn-icon" onclick="deletarVendaManual(${v.id})" title="Apagar">

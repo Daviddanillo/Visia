@@ -205,14 +205,22 @@ def gerar_previsao(
     db: Session,
     dias: int = 30,
     arquivo_id: Optional[int] = None,
+    categoria: Optional[str] = None,
 ) -> dict:
     # ---- Carregar dados do banco ----
     query = db.query(Venda).filter(Venda.usuario_id == usuario_id)
     if arquivo_id:
         query = query.filter(Venda.arquivo_id == arquivo_id)
+    if categoria:
+        query = query.filter(Venda.categoria == categoria)
     vendas = query.all()
 
     if len(vendas) < 5:
+        if categoria:
+            raise ValueError(
+                f"Dados insuficientes para a categoria '{categoria}'. "
+                "Mínimo de 5 registros necessários."
+            )
         raise ValueError("Dados insuficientes. Mínimo de 5 registros necessários.")
 
     df = pd.DataFrame([{"ds": v.data_venda, "y": float(v.valor)} for v in vendas])
@@ -411,6 +419,8 @@ def gerar_previsao(
         arq = db.query(UploadArquivo).filter(UploadArquivo.id == arquivo_id).first()
         if arq:
             nome_arquivo = arq.nome_arquivo
+    if categoria:
+        nome_arquivo = f"{nome_arquivo} · {categoria}"
 
     # ---- Resumo ----
     yhats            = [f["yhat"] for f in forecast_list]
@@ -421,6 +431,7 @@ def gerar_previsao(
     return {
         "arquivo_id":      arquivo_id,
         "nome_arquivo":    nome_arquivo,
+        "categoria":       categoria,
         "dias_previstos":  dias,
         "total_historico": len(historico),
         "forecast":        forecast_list,
@@ -444,4 +455,237 @@ def gerar_previsao(
                 for f in feriados_periodo
             ],
         },
+    }
+
+
+# ---------------------------------------------------------------------------
+# Previsão POR CATEGORIA / PRODUTO
+# ---------------------------------------------------------------------------
+
+_DIAS_SEMANA_SHORT = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
+
+
+def _prever_serie_categoria(
+    serie: pd.DataFrame,
+    dias: int,
+    holidays_df: pd.DataFrame,
+) -> tuple:
+    """Ajusta um Prophet leve a uma série diária e devolve (forecast_fut, hist).
+
+    `serie` deve ter colunas ds (datetime) e y. Retorna a porção futura do
+    forecast (DataFrame) e o histórico agregado.
+    """
+    model = Prophet(
+        changepoint_prior_scale=0.05,
+        seasonality_mode="additive",
+        yearly_seasonality="auto",
+        weekly_seasonality="auto",
+        daily_seasonality=False,
+        holidays=holidays_df,
+        interval_width=0.80,
+    )
+    model.fit(serie)
+    future   = model.make_future_dataframe(periods=dias, freq="D")
+    forecast = model.predict(future)
+    fut = forecast[forecast["ds"] > serie["ds"].max()].copy()
+    return fut, serie
+
+
+def _insights_da_serie(categoria: str, fut: pd.DataFrame, max_insights: int = 3) -> list:
+    """Detecta dias de alta/queda relevantes para uma categoria e gera frases."""
+    yhat_arr = np.maximum(fut["yhat"].values.astype(float), 0)
+    positivos = yhat_arr[yhat_arr > 0]
+    if len(positivos) < 4:
+        return []
+    mediana = float(np.median(positivos))
+    if mediana <= 0:
+        return []
+    p25 = float(np.percentile(positivos, 25))
+    p75 = float(np.percentile(positivos, 75))
+
+    candidatos = []
+    for i, row in enumerate(fut.itertuples()):
+        yhat = float(yhat_arr[i])
+        if yhat < mediana * 0.05:
+            continue
+        pct = (yhat - mediana) / mediana * 100
+        if yhat >= p75 and pct >= 8:
+            tipo = "alta"
+        elif yhat <= p25 and pct <= -8:
+            tipo = "queda"
+        else:
+            continue
+        candidatos.append({
+            "ds":        row.ds.strftime("%Y-%m-%d"),
+            "ds_br":     row.ds.strftime("%d/%m/%Y"),
+            "dia_semana": _DIAS_SEMANA_SHORT[row.ds.dayofweek],
+            "tipo":      tipo,
+            "pct":       round(pct, 1),
+            "yhat":      round(yhat, 2),
+            "categoria": categoria,
+        })
+
+    # Deduplica em janelas de 7 dias, mantendo o mais extremo de cada tipo
+    selecionados = []
+    for tipo in ("alta", "queda"):
+        grupo = [c for c in candidatos if c["tipo"] == tipo]
+        grupo.sort(key=lambda c: abs(c["pct"]), reverse=True)
+        usados: list = []
+        for c in grupo:
+            d = pd.Timestamp(c["ds"])
+            if any(abs((d - pd.Timestamp(u["ds"])).days) < 7 for u in usados):
+                continue
+            usados.append(c)
+            if len(usados) >= max_insights:
+                break
+        selecionados.extend(usados)
+
+    selecionados.sort(key=lambda c: c["ds"])
+    for c in selecionados:
+        if c["tipo"] == "alta":
+            frase, sinal = "aumento previsto de", "+"
+        else:
+            frase, sinal = "queda prevista de", ""
+        c["texto"] = (
+            f"{c['ds_br']} ({c['dia_semana']}): {frase} "
+            f"{categoria} ({sinal}{c['pct']}%)"
+        )
+    return selecionados
+
+
+def gerar_previsao_categorias(
+    usuario_id: int,
+    db: Session,
+    dias: int = 30,
+    arquivo_id: Optional[int] = None,
+    max_categorias: int = 10,
+) -> dict:
+    """Gera previsões individuais por categoria/produto e insights consolidados."""
+    query = db.query(Venda).filter(
+        Venda.usuario_id == usuario_id,
+        Venda.categoria.isnot(None),
+    )
+    if arquivo_id:
+        query = query.filter(Venda.arquivo_id == arquivo_id)
+    vendas = query.all()
+
+    if not vendas:
+        return {
+            "disponivel": False,
+            "motivo": "Esta base de dados não possui categorias. "
+                      "Envie um CSV com uma coluna de categoria/produto "
+                      "(ex.: 'Chocolate', 'Flores') para ver previsões por produto.",
+            "dias_previstos": dias,
+            "categorias": [],
+            "insights": [],
+        }
+
+    df = pd.DataFrame([
+        {"categoria": v.categoria, "ds": v.data_venda, "y": float(v.valor)}
+        for v in vendas
+    ])
+    df["ds"] = pd.to_datetime(df["ds"])
+
+    # Ranking de categorias por volume total
+    totais = (
+        df.groupby("categoria")["y"]
+        .agg(total="sum", registros="count")
+        .reset_index()
+        .sort_values("total", ascending=False)
+    )
+    top_categorias = totais.head(max_categorias)["categoria"].tolist()
+
+    # Feriados cobrindo todo o intervalo
+    min_ano = int(df["ds"].dt.year.min())
+    max_ano = (datetime.now() + timedelta(days=dias + 366)).year
+    holidays_df, _ = _construir_feriados(list(range(min_ano, max_ano + 1)))
+
+    categorias_out: list = []
+    insights_globais: list = []
+
+    for cat in top_categorias:
+        sub = (
+            df[df["categoria"] == cat]
+            .groupby("ds")["y"].sum().reset_index().sort_values("ds")
+        )
+        media_hist = float(sub["y"].mean()) if len(sub) else 0.0
+        registros  = int(totais.loc[totais["categoria"] == cat, "registros"].iloc[0])
+        total_hist = float(totais.loc[totais["categoria"] == cat, "total"].iloc[0])
+
+        item = {
+            "categoria":             cat,
+            "registros":             registros,
+            "total_historico_valor": round(total_hist, 2),
+            "media_historica":       round(media_hist, 2),
+            "forecast":              [],
+            "insights":              [],
+        }
+
+        if len(sub) >= 5:
+            try:
+                fut, _ = _prever_serie_categoria(sub, dias, holidays_df)
+                yhat_fut = np.maximum(fut["yhat"].values.astype(float), 0)
+                media_prev = float(np.mean(yhat_fut)) if len(yhat_fut) else 0.0
+                item["forecast"] = [
+                    {
+                        "ds":    row.ds.strftime("%Y-%m-%d"),
+                        "ds_br": row.ds.strftime("%d/%m/%Y"),
+                        "yhat":  round(max(float(row.yhat), 0), 2),
+                    }
+                    for row in fut.itertuples()
+                ]
+                idx_pico = int(np.argmax(yhat_fut)) if len(yhat_fut) else 0
+                item["pico"] = item["forecast"][idx_pico] if item["forecast"] else None
+                ins = _insights_da_serie(cat, fut)
+                item["insights"] = ins
+                insights_globais.extend(ins)
+            except Exception:
+                media_prev = media_hist
+                item["modelo"] = "fallback"
+        else:
+            # Poucos dados → fallback simples (média recente)
+            recente = sub.tail(14)["y"].mean() if len(sub) else 0.0
+            media_prev = float(recente) if not np.isnan(recente) else media_hist
+            item["modelo"] = "fallback"
+
+        item["media_prevista"] = round(media_prev, 2)
+        if media_hist > 0:
+            variacao = (media_prev - media_hist) / media_hist * 100
+        else:
+            variacao = 0.0
+        item["variacao_pct"] = round(variacao, 1)
+        if variacao >= 5:
+            item["tendencia"] = "alta"
+        elif variacao <= -5:
+            item["tendencia"] = "queda"
+        else:
+            item["tendencia"] = "estavel"
+
+        categorias_out.append(item)
+
+    # ── Insights globais: ordena por data, limita aos mais relevantes ──
+    insights_globais.sort(key=lambda c: (c["ds"], -abs(c["pct"])))
+    insights_globais = insights_globais[:25]
+
+    # ── Resumo: categoria em maior crescimento e maior volume ──
+    resumo = {}
+    if categorias_out:
+        destaque = max(categorias_out, key=lambda c: c["variacao_pct"])
+        maior_vol = max(categorias_out, key=lambda c: c["total_historico_valor"])
+        queda = min(categorias_out, key=lambda c: c["variacao_pct"])
+        resumo = {
+            "categoria_destaque":      destaque["categoria"],
+            "categoria_destaque_pct":  destaque["variacao_pct"],
+            "categoria_maior_volume":  maior_vol["categoria"],
+            "categoria_queda":         queda["categoria"] if queda["variacao_pct"] < 0 else None,
+            "categoria_queda_pct":     queda["variacao_pct"] if queda["variacao_pct"] < 0 else None,
+        }
+
+    return {
+        "disponivel":       True,
+        "dias_previstos":   dias,
+        "total_categorias": len(categorias_out),
+        "categorias":       categorias_out,
+        "insights":         insights_globais,
+        "resumo":           resumo,
     }
