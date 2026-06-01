@@ -33,7 +33,25 @@ def _migrar_coluna_categoria() -> None:
         logging.warning("Não foi possível migrar a coluna 'categoria': %s", exc)
 
 
+def _migrar_coluna_pasta_id() -> None:
+    """Adiciona a coluna `pasta_id` à tabela `uploads_arquivos` (bancos antigos).
+
+    A tabela `pastas` é criada por `create_all`; aqui garantimos que arquivos
+    importados antes da feature de organização ganhem a coluna de pasta.
+    """
+    try:
+        inspetor = inspect(engine)
+        colunas = {c["name"] for c in inspetor.get_columns("uploads_arquivos")}
+        if "pasta_id" not in colunas:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE uploads_arquivos ADD COLUMN pasta_id INTEGER"))
+            logging.info("Migração: coluna 'pasta_id' adicionada à tabela 'uploads_arquivos'.")
+    except Exception as exc:  # pragma: no cover — best-effort
+        logging.warning("Não foi possível migrar a coluna 'pasta_id': %s", exc)
+
+
 _migrar_coluna_categoria()
+_migrar_coluna_pasta_id()
 
 app = FastAPI(
     title="Visia Intelligence API",

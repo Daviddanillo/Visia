@@ -37,6 +37,36 @@ class ArquivoResposta(BaseModel):
     id: int
     nome_arquivo: str
     data_upload: date
+    pasta_id: Optional[int] = None
+
+    model_config = {"from_attributes": True}
+
+
+class ArquivoAtualizar(BaseModel):
+    """Renomeia (`nome_arquivo`) e/ou move (`pasta_id`) um arquivo.
+
+    `pasta_id=None` movido explicitamente para a raiz; usar
+    ``model_fields_set`` para distinguir 'não informado' de 'mover p/ raiz'.
+    """
+
+    nome_arquivo: Optional[str] = None
+    pasta_id: Optional[int] = None
+
+
+class PastaCriar(BaseModel):
+    nome: str = Field(..., min_length=1, max_length=120)
+    parent_id: Optional[int] = None
+
+
+class PastaAtualizar(BaseModel):
+    nome: Optional[str] = Field(None, min_length=1, max_length=120)
+    parent_id: Optional[int] = None
+
+
+class PastaResposta(BaseModel):
+    id: int
+    nome: str
+    parent_id: Optional[int] = None
 
     model_config = {"from_attributes": True}
 

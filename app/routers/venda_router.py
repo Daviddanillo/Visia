@@ -10,11 +10,15 @@ from sqlalchemy.orm import Session
 from app.core.security import get_current_user
 from app.db.database import get_db
 from app.models.usuario import Usuario
-from app.models.venda import UploadArquivo, Venda
+from app.models.venda import Pasta, UploadArquivo, Venda
 from app.schemas.venda import (
+    ArquivoAtualizar,
     ArquivoResposta,
     CategoriaResposta,
     ImportacaoResposta,
+    PastaAtualizar,
+    PastaCriar,
+    PastaResposta,
     StatsResposta,
     VendaAtualizar,
     VendaCriar,
@@ -92,6 +96,36 @@ def listar_arquivos(
     )
 
 
+@router.put("/arquivos/{arquivo_id}", response_model=ArquivoResposta)
+def atualizar_arquivo(
+    arquivo_id: int,
+    dados: ArquivoAtualizar,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    """Renomeia e/ou move (organiza em pasta) um arquivo importado."""
+    arquivo = (
+        db.query(UploadArquivo)
+        .filter(UploadArquivo.id == arquivo_id, UploadArquivo.usuario_id == usuario.id)
+        .first()
+    )
+    if not arquivo:
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado.")
+
+    informados = dados.model_fields_set
+    if "nome_arquivo" in informados and dados.nome_arquivo is not None:
+        nome = dados.nome_arquivo.strip()
+        if not nome:
+            raise HTTPException(status_code=400, detail="O nome não pode ser vazio.")
+        arquivo.nome_arquivo = nome
+    if "pasta_id" in informados:
+        arquivo.pasta_id = _validar_pasta_destino(dados.pasta_id, usuario, db)
+
+    db.commit()
+    db.refresh(arquivo)
+    return arquivo
+
+
 @router.delete("/arquivos/{arquivo_id}", status_code=status.HTTP_204_NO_CONTENT)
 def deletar_arquivo(
     arquivo_id: int,
@@ -106,6 +140,138 @@ def deletar_arquivo(
     if not arquivo:
         raise HTTPException(status_code=404, detail="Arquivo não encontrado.")
     db.delete(arquivo)
+    db.commit()
+
+
+# ── Pastas (organização) ─────────────────────────────────────────────────────
+
+def _validar_pasta_destino(
+    pasta_id: Optional[int], usuario: Usuario, db: Session
+) -> Optional[int]:
+    """Valida que `pasta_id` (destino de um arquivo/pasta) pertence ao usuário."""
+    if pasta_id is None:
+        return None
+    existe = (
+        db.query(Pasta)
+        .filter(Pasta.id == pasta_id, Pasta.usuario_id == usuario.id)
+        .first()
+    )
+    if not existe:
+        raise HTTPException(status_code=404, detail="Pasta de destino não encontrada.")
+    return pasta_id
+
+
+def _ids_descendentes(pasta_id: int, usuario: Usuario, db: Session) -> set:
+    """Retorna o id da pasta + todos os ids descendentes (subpastas, recursivo)."""
+    todas = (
+        db.query(Pasta.id, Pasta.parent_id)
+        .filter(Pasta.usuario_id == usuario.id)
+        .all()
+    )
+    filhos: dict = {}
+    for pid, parent in todas:
+        filhos.setdefault(parent, []).append(pid)
+
+    coletados: set = set()
+    pilha = [pasta_id]
+    while pilha:
+        atual = pilha.pop()
+        if atual in coletados:
+            continue
+        coletados.add(atual)
+        pilha.extend(filhos.get(atual, []))
+    return coletados
+
+
+@router.get("/pastas", response_model=List[PastaResposta])
+def listar_pastas(
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    return (
+        db.query(Pasta)
+        .filter(Pasta.usuario_id == usuario.id)
+        .order_by(Pasta.nome.asc())
+        .all()
+    )
+
+
+@router.post("/pastas", response_model=PastaResposta, status_code=status.HTTP_201_CREATED)
+def criar_pasta(
+    dados: PastaCriar,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    nome = dados.nome.strip()
+    if not nome:
+        raise HTTPException(status_code=400, detail="O nome da pasta não pode ser vazio.")
+    parent_id = _validar_pasta_destino(dados.parent_id, usuario, db)
+    pasta = Pasta(nome=nome, parent_id=parent_id, usuario_id=usuario.id)
+    db.add(pasta)
+    db.commit()
+    db.refresh(pasta)
+    return pasta
+
+
+@router.put("/pastas/{pasta_id}", response_model=PastaResposta)
+def atualizar_pasta(
+    pasta_id: int,
+    dados: PastaAtualizar,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    """Renomeia e/ou move uma pasta (impede mover para dentro dela mesma)."""
+    pasta = (
+        db.query(Pasta)
+        .filter(Pasta.id == pasta_id, Pasta.usuario_id == usuario.id)
+        .first()
+    )
+    if not pasta:
+        raise HTTPException(status_code=404, detail="Pasta não encontrada.")
+
+    informados = dados.model_fields_set
+    if "nome" in informados and dados.nome is not None:
+        nome = dados.nome.strip()
+        if not nome:
+            raise HTTPException(status_code=400, detail="O nome não pode ser vazio.")
+        pasta.nome = nome
+    if "parent_id" in informados:
+        destino = _validar_pasta_destino(dados.parent_id, usuario, db)
+        if destino is not None and destino in _ids_descendentes(pasta_id, usuario, db):
+            raise HTTPException(
+                status_code=400,
+                detail="Não é possível mover uma pasta para dentro dela mesma.",
+            )
+        pasta.parent_id = destino
+
+    db.commit()
+    db.refresh(pasta)
+    return pasta
+
+
+@router.delete("/pastas/{pasta_id}", status_code=status.HTTP_204_NO_CONTENT)
+def deletar_pasta(
+    pasta_id: int,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    """Remove a pasta e suas subpastas. Os arquivos CSV voltam para a raiz."""
+    pasta = (
+        db.query(Pasta)
+        .filter(Pasta.id == pasta_id, Pasta.usuario_id == usuario.id)
+        .first()
+    )
+    if not pasta:
+        raise HTTPException(status_code=404, detail="Pasta não encontrada.")
+
+    # Preserva os dados: arquivos da pasta e descendentes voltam para a raiz.
+    ids = _ids_descendentes(pasta_id, usuario, db)
+    db.query(UploadArquivo).filter(
+        UploadArquivo.usuario_id == usuario.id,
+        UploadArquivo.pasta_id.in_(ids),
+    ).update({UploadArquivo.pasta_id: None}, synchronize_session=False)
+
+    db.delete(pasta)  # cascade remove as subpastas
     db.commit()
 
 

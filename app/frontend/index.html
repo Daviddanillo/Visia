@@ -219,7 +219,7 @@ input,select,textarea{font-family:inherit;outline:none}
 .dropzone-icon{font-size:2.2rem;margin-bottom:10px;opacity:.5}
 .dropzone p{color:var(--text-muted);font-size:.88rem;line-height:1.5}
 .dropzone strong{color:var(--accent)}
-#input-csv{display:none}
+#input-csv,#input-pasta{display:none}
 
 #toast-container{position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px}
 .toast{
@@ -320,6 +320,40 @@ input,select,textarea{font-family:inherit;outline:none}
 .arquivos-table td{padding:12px 14px;font-size:.88rem;border-bottom:1px solid var(--border);vertical-align:middle}
 .arquivos-table tr:last-child td{border-bottom:none}
 .arquivos-table tr:hover td{background:var(--surface2)}
+
+/* ── Gerenciador de arquivos (pastas) ── */
+.fm-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.fm-breadcrumb{display:flex;align-items:center;gap:4px;flex-wrap:wrap;font-size:.85rem;flex:1;min-width:0}
+.fm-crumb{
+  display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:8px;
+  color:var(--text-muted);cursor:pointer;transition:all var(--trans);font-weight:600;
+  border:1px solid transparent
+}
+.fm-crumb:hover{color:var(--text);background:var(--surface2)}
+.fm-crumb.fm-current{color:var(--accent);cursor:default}
+.fm-crumb.fm-drop-on{background:var(--accent-glow);border-color:var(--accent);color:var(--accent)}
+.fm-crumb-sep{color:var(--text-muted);opacity:.5}
+
+.fm-list{display:flex;flex-direction:column;gap:8px}
+.fm-item{
+  display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:10px;
+  border:1px solid var(--border);background:var(--surface2);transition:all var(--trans);
+  cursor:default
+}
+.fm-item:hover{border-color:var(--surface3);background:var(--surface3)}
+.fm-item.fm-folder{cursor:pointer}
+.fm-item.fm-drop-on{border-color:var(--accent);background:var(--accent-glow);box-shadow:0 0 0 1px var(--accent) inset}
+.fm-item.fm-dragging{opacity:.4}
+.fm-ico{width:34px;height:34px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:8px}
+.fm-ico-folder{background:var(--accent-glow);color:var(--accent)}
+.fm-ico-file{background:var(--surface);color:var(--text-muted)}
+.fm-ico svg{width:18px;height:18px}
+.fm-main{flex:1;min-width:0;display:flex;flex-direction:column}
+.fm-name{font-weight:600;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fm-sub{font-size:.74rem;color:var(--text-muted);margin-top:1px}
+.fm-actions{display:flex;gap:6px;flex-shrink:0}
+.fm-drag-handle{color:var(--text-muted);opacity:.4;cursor:grab}
+.fm-item:hover .fm-drag-handle{opacity:.7}
 
 /* ═══════════════════════════════════════
    PREVISAO PAGE
@@ -638,6 +672,11 @@ input,select,textarea{font-family:inherit;outline:none}
               <p style="margin-top:6px;font-size:.78rem">Formato .csv — data, valor e <strong style="color:var(--accent)">categoria/produto</strong> detectados automaticamente</p>
             </div>
             <input type="file" id="input-csv" accept=".csv" onchange="uploadCSV(this.files[0])"/>
+            <input type="file" id="input-pasta" webkitdirectory directory multiple onchange="uploadPasta(this.files)"/>
+            <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:12px;justify-content:center" onclick="document.getElementById('input-pasta').click()">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+              Importar pasta inteira (vários CSVs)
+            </button>
             <div class="upload-progress" id="upload-progress"><div class="upload-progress-bar" id="upload-bar"></div></div>
             <div class="divider"></div>
             <div class="callout">
@@ -1027,6 +1066,71 @@ async function uploadCSV(file) {
   document.getElementById('input-csv').value = '';
 }
 
+/* Importa uma pasta inteira: recria a estrutura de subpastas e sobe cada CSV. */
+async function uploadPasta(fileList) {
+  const files = Array.from(fileList || []).filter(f => f.name.toLowerCase().endsWith('.csv'));
+  const inp = document.getElementById('input-pasta');
+  if (!files.length) {
+    toast('Nenhum arquivo .csv encontrado na pasta.', 'error');
+    if (inp) inp.value = '';
+    return;
+  }
+  const prog = document.getElementById('upload-progress');
+  const bar  = document.getElementById('upload-bar');
+  prog.style.display = 'block';
+
+  // Cache de caminho-relativo → id da pasta (recriadas sob a pasta atual).
+  const cachePastas = { '': pastaAtual };
+  async function garantirPasta(dirPath) {
+    if (dirPath in cachePastas) return cachePastas[dirPath];
+    const partes     = dirPath.split('/');
+    const nome       = partes[partes.length - 1];
+    const caminhoPai = partes.slice(0, -1).join('/');
+    const parentId   = await garantirPasta(caminhoPai);
+    const r = await authFetch('/vendas/pastas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nome, parent_id: parentId }),
+    });
+    const p = await r.json();
+    if (!r.ok) throw new Error(extrairErro(p, 'Erro ao criar pasta.'));
+    cachePastas[dirPath] = p.id;
+    return p.id;
+  }
+
+  let ok = 0, falhou = 0;
+  for (let i = 0; i < files.length; i++) {
+    const f       = files[i];
+    const rel     = f.webkitRelativePath || f.name;
+    const segs     = rel.split('/');
+    const dirPath = segs.slice(0, -1).join('/');
+    bar.style.width = Math.round(((i + 1) / files.length) * 100) + '%';
+    try {
+      const pid = await garantirPasta(dirPath);
+      const fd  = new FormData();
+      fd.append('file', f);
+      const r = await authFetch('/vendas/importar-csv', { method: 'POST', body: fd });
+      const d = await r.json();
+      if (!r.ok) throw new Error('import');
+      if (pid != null) {
+        await authFetch(`/vendas/arquivos/${d.arquivo_id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pasta_id: pid }),
+        });
+      }
+      ok++;
+    } catch (_) { falhou++; }
+  }
+
+  setTimeout(() => { prog.style.display = 'none'; bar.style.width = '0'; }, 800);
+  if (inp) inp.value = '';
+  toast(`${ok} arquivo(s) importado(s)${falhou ? ` — ${falhou} falharam` : ''} 📁`, falhou ? 'info' : 'success');
+  carregarTabelaArquivos();
+  carregarVendasDatalist();
+  carregarDashboard();
+}
+
 async function inserirManual() {
   const data      = document.getElementById('inp-data-venda').value;
   const valor     = parseFloat(document.getElementById('inp-valor').value);
@@ -1049,31 +1153,244 @@ async function inserirManual() {
   } catch (e) { toast('Erro: ' + e.message, 'error'); }
 }
 
+/* ── Gerenciador de arquivos com pastas ── */
+let pastaAtual    = null;   // id da pasta aberta (null = raiz)
+let _pastasCache  = [];
+let _arquivosCache = [];
+let _fmDrag       = null;   // item sendo arrastado: {tipo:'pasta'|'arquivo', id}
+
+const ICO_FOLDER = '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>';
+const ICO_FILE   = '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+
 async function carregarTabelaArquivos() {
   const wrap = document.getElementById('tabela-arquivos-wrap');
   wrap.innerHTML = '<div class="loading-box"><div class="spinner"></div><p>Carregando...</p></div>';
   try {
-    const r    = await authFetch('/vendas/arquivos');
-    const arqs = await r.json();
-    if (!arqs.length) {
-      wrap.innerHTML = `<div class="empty-state"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><strong>Nenhum arquivo importado</strong><p>Faça o upload de um CSV acima</p></div>`;
-      return;
-    }
-    wrap.innerHTML = `<table class="arquivos-table"><thead><tr><th>ID</th><th>Arquivo</th><th>Importado em</th><th style="text-align:right">Ações</th></tr></thead><tbody>${
-      arqs.map(a => `<tr>
-        <td><span class="badge badge-muted">#${a.id}</span></td>
-        <td style="font-weight:600">${esc(a.nome_arquivo)}</td>
-        <td style="color:var(--text-muted)">${fmtDataBR(a.data_upload)}</td>
-        <td style="text-align:right;display:flex;gap:6px;justify-content:flex-end">
-          <button class="btn btn-ghost btn-sm btn-icon" onclick="usarNoPrevisao(${a.id})" title="Usar na previsão">
-            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-          </button>
-          <button class="btn btn-danger btn-sm btn-icon" onclick="deletarArquivo(${a.id},'${esc(a.nome_arquivo)}')" title="Remover">
-            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
-          </button>
-        </td></tr>`).join('')
-    }</tbody></table>`;
+    const [rp, ra] = await Promise.all([
+      authFetch('/vendas/pastas'),
+      authFetch('/vendas/arquivos'),
+    ]);
+    _pastasCache   = await rp.json();
+    _arquivosCache = await ra.json();
+    // Se a pasta aberta foi removida, volta para a raiz.
+    if (pastaAtual != null && !_pastasCache.some(p => p.id === pastaAtual)) pastaAtual = null;
+    renderGerenciadorArquivos();
   } catch (_) { wrap.innerHTML = '<p style="color:var(--text-muted);padding:20px">Erro ao carregar.</p>'; }
+}
+
+function _contarFilhos(pastaId) {
+  const subs = _pastasCache.filter(p => (p.parent_id ?? null) === pastaId).length;
+  const arqs = _arquivosCache.filter(a => (a.pasta_id ?? null) === pastaId).length;
+  return { subs, arqs };
+}
+
+function renderGerenciadorArquivos() {
+  const wrap = document.getElementById('tabela-arquivos-wrap');
+  const subpastas = _pastasCache
+    .filter(p => (p.parent_id ?? null) === pastaAtual)
+    .sort((a, b) => a.nome.localeCompare(b.nome));
+  const arquivos = _arquivosCache
+    .filter(a => (a.pasta_id ?? null) === pastaAtual)
+    .sort((a, b) => b.id - a.id);
+
+  // ── Trilha (breadcrumb) ──
+  const trail = [];
+  let cur = pastaAtual;
+  while (cur != null) {
+    const p = _pastasCache.find(x => x.id === cur);
+    if (!p) break;
+    trail.unshift(p);
+    cur = p.parent_id ?? null;
+  }
+  const crumbRaiz = `<span class="fm-crumb ${pastaAtual === null ? 'fm-current' : ''}" onclick="abrirPasta(null)"
+      ondragover="fmCrumbOver(event)" ondragleave="fmCrumbLeave(event)" ondrop="fmDrop(event,null)">
+      ${ICO_FOLDER} Raiz</span>`;
+  const crumbsResto = trail.map((p, i) => {
+    const atual = i === trail.length - 1;
+    return `<span class="fm-crumb-sep">›</span>
+      <span class="fm-crumb ${atual ? 'fm-current' : ''}" onclick="abrirPasta(${p.id})"
+        ondragover="fmCrumbOver(event)" ondragleave="fmCrumbLeave(event)" ondrop="fmDrop(event,${p.id})">${esc(p.nome)}</span>`;
+  }).join('');
+
+  // ── Toolbar ──
+  const toolbar = `<div class="fm-toolbar">
+    <div class="fm-breadcrumb">${crumbRaiz}${crumbsResto}</div>
+    <button class="btn btn-accent btn-sm" onclick="criarPasta()">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+      Nova pasta
+    </button>
+  </div>`;
+
+  if (!subpastas.length && !arquivos.length) {
+    const vazioMsg = pastaAtual === null
+      ? '<strong>Nenhum arquivo importado</strong><p>Importe um CSV ou uma pasta inteira acima — depois organize tudo em pastas aqui</p>'
+      : '<strong>Pasta vazia</strong><p>Arraste arquivos ou pastas para cá, ou crie uma subpasta</p>';
+    wrap.innerHTML = toolbar + `<div class="empty-state">${ICO_FOLDER}${vazioMsg}</div>`;
+    return;
+  }
+
+  const linhasPastas = subpastas.map(p => {
+    const { subs, arqs } = _contarFilhos(p.id);
+    const partes = [];
+    if (subs) partes.push(`${subs} pasta${subs > 1 ? 's' : ''}`);
+    if (arqs) partes.push(`${arqs} arquivo${arqs > 1 ? 's' : ''}`);
+    const sub = partes.length ? partes.join(' · ') : 'vazia';
+    return `<div class="fm-item fm-folder" draggable="true"
+        ondragstart="fmDragStart(event,'pasta',${p.id})" ondragend="fmDragEnd(event)"
+        ondragover="fmItemOver(event)" ondragleave="fmItemLeave(event)" ondrop="fmDrop(event,${p.id})"
+        onclick="abrirPasta(${p.id})">
+      <span class="fm-drag-handle" title="Arraste para mover">⠿</span>
+      <div class="fm-ico fm-ico-folder">${ICO_FOLDER}</div>
+      <div class="fm-main"><div class="fm-name">${esc(p.nome)}</div><div class="fm-sub">${sub}</div></div>
+      <div class="fm-actions" onclick="event.stopPropagation()">
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="renomearPasta(${p.id})" title="Renomear">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z"/></svg>
+        </button>
+        <button class="btn btn-danger btn-sm btn-icon" onclick="deletarPasta(${p.id})" title="Excluir pasta">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+
+  const linhasArquivos = arquivos.map(a => `<div class="fm-item" draggable="true"
+      ondragstart="fmDragStart(event,'arquivo',${a.id})" ondragend="fmDragEnd(event)">
+    <span class="fm-drag-handle" title="Arraste para uma pasta">⠿</span>
+    <div class="fm-ico fm-ico-file">${ICO_FILE}</div>
+    <div class="fm-main"><div class="fm-name">${esc(a.nome_arquivo)}</div><div class="fm-sub">#${a.id} · ${fmtDataBR(a.data_upload)}</div></div>
+    <div class="fm-actions">
+      <button class="btn btn-ghost btn-sm btn-icon" onclick="usarNoPrevisao(${a.id})" title="Usar na previsão">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      </button>
+      <button class="btn btn-ghost btn-sm btn-icon" onclick="renomearArquivo(${a.id})" title="Renomear">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z"/></svg>
+      </button>
+      <button class="btn btn-danger btn-sm btn-icon" onclick="deletarArquivo(${a.id},'${esc(a.nome_arquivo)}')" title="Remover">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+      </button>
+    </div>
+  </div>`).join('');
+
+  wrap.innerHTML = toolbar + `<div class="fm-list">${linhasPastas}${linhasArquivos}</div>`;
+}
+
+function abrirPasta(id) { pastaAtual = id; renderGerenciadorArquivos(); }
+
+async function criarPasta() {
+  const nome = prompt('Nome da nova pasta:');
+  if (nome == null) return;
+  if (!nome.trim()) { toast('Informe um nome para a pasta.', 'error'); return; }
+  try {
+    const r = await authFetch('/vendas/pastas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nome: nome.trim(), parent_id: pastaAtual }),
+    });
+    if (!r.ok) throw new Error(extrairErro(await r.json(), 'Erro ao criar pasta.'));
+    toast('Pasta criada.', 'success');
+    carregarTabelaArquivos();
+  } catch (e) { toast('Erro: ' + e.message, 'error'); }
+}
+
+async function renomearPasta(id) {
+  const atual = _pastasCache.find(p => p.id === id);
+  const nome = prompt('Renomear pasta:', atual ? atual.nome : '');
+  if (nome == null || !nome.trim()) return;
+  try {
+    const r = await authFetch(`/vendas/pastas/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nome: nome.trim() }),
+    });
+    if (!r.ok) throw new Error(extrairErro(await r.json(), 'Erro ao renomear.'));
+    toast('Pasta renomeada.', 'success');
+    carregarTabelaArquivos();
+  } catch (e) { toast('Erro: ' + e.message, 'error'); }
+}
+
+async function deletarPasta(id) {
+  const p = _pastasCache.find(x => x.id === id);
+  if (!confirm(`Excluir a pasta "${p ? p.nome : ''}" e suas subpastas?\nOs arquivos CSV dentro dela voltam para a raiz (os dados não são perdidos).`)) return;
+  try {
+    const r = await authFetch(`/vendas/pastas/${id}`, { method: 'DELETE' });
+    if (!r.ok && r.status !== 204) throw new Error(extrairErro(await r.json(), 'Erro ao excluir.'));
+    toast('Pasta excluída.', 'success');
+    if (pastaAtual === id) pastaAtual = p ? (p.parent_id ?? null) : null;
+    carregarTabelaArquivos();
+  } catch (e) { toast('Erro: ' + e.message, 'error'); }
+}
+
+async function renomearArquivo(id) {
+  const a = _arquivosCache.find(x => x.id === id);
+  const nome = prompt('Renomear arquivo:', a ? a.nome_arquivo : '');
+  if (nome == null || !nome.trim()) return;
+  try {
+    const r = await authFetch(`/vendas/arquivos/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nome_arquivo: nome.trim() }),
+    });
+    if (!r.ok) throw new Error(extrairErro(await r.json(), 'Erro ao renomear.'));
+    toast('Arquivo renomeado.', 'success');
+    carregarTabelaArquivos();
+  } catch (e) { toast('Erro: ' + e.message, 'error'); }
+}
+
+/* ── Drag & drop (mover arquivos/pastas) ── */
+function fmDragStart(e, tipo, id) {
+  _fmDrag = { tipo, id };
+  e.dataTransfer.effectAllowed = 'move';
+  e.currentTarget.classList.add('fm-dragging');
+}
+function fmDragEnd(e) {
+  e.currentTarget.classList.remove('fm-dragging');
+  _fmDrag = null;
+  document.querySelectorAll('.fm-drop-on').forEach(el => el.classList.remove('fm-drop-on'));
+}
+function fmItemOver(e) {
+  if (!_fmDrag) return;
+  e.preventDefault();
+  e.currentTarget.classList.add('fm-drop-on');
+}
+function fmItemLeave(e) { e.currentTarget.classList.remove('fm-drop-on'); }
+function fmCrumbOver(e) {
+  if (!_fmDrag) return;
+  e.preventDefault();
+  e.currentTarget.classList.add('fm-drop-on');
+}
+function fmCrumbLeave(e) { e.currentTarget.classList.remove('fm-drop-on'); }
+
+async function fmDrop(e, destinoId) {
+  e.preventDefault();
+  e.stopPropagation();
+  e.currentTarget.classList.remove('fm-drop-on');
+  const drag = _fmDrag;
+  _fmDrag = null;
+  if (!drag) return;
+
+  try {
+    if (drag.tipo === 'arquivo') {
+      const a = _arquivosCache.find(x => x.id === drag.id);
+      if (a && (a.pasta_id ?? null) === destinoId) return;
+      const r = await authFetch(`/vendas/arquivos/${drag.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pasta_id: destinoId }),
+      });
+      if (!r.ok) throw new Error(extrairErro(await r.json(), 'Erro ao mover.'));
+    } else {
+      if (drag.id === destinoId) return;
+      const p = _pastasCache.find(x => x.id === drag.id);
+      if (p && (p.parent_id ?? null) === destinoId) return;
+      const r = await authFetch(`/vendas/pastas/${drag.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parent_id: destinoId }),
+      });
+      if (!r.ok) throw new Error(extrairErro(await r.json(), 'Erro ao mover.'));
+    }
+    carregarTabelaArquivos();
+  } catch (err) { toast('Erro: ' + err.message, 'error'); }
 }
 
 async function deletarArquivo(arquivoId, nome) {
