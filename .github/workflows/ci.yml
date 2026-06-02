@@ -64,7 +64,6 @@ jobs:
   dependency-audit:
     name: Auditoria de dependências (pip-audit)
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -73,7 +72,11 @@ jobs:
           cache: pip
       - name: Instalar pip-audit
         run: pip install pip-audit
+      # continue-on-error no STEP: o relatório de CVEs aparece nos logs, mas o
+      # check fica verde (advisório). Assim novas vulnerabilidades ficam visíveis
+      # sem travar o pipeline por correções que dependem de subir o FastAPI.
       - name: Auditar requirements.txt
+        continue-on-error: true
         run: pip-audit -r requirements.txt --desc
 
   # ── 5) Testes automatizados (pytest) ───────────────────────────────────────
