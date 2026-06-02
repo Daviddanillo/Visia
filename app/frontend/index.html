@@ -850,9 +850,15 @@ input,select,textarea{font-family:inherit;outline:none}
               </div>
             </div>
             <div id="tab-tabela" class="tab-pane">
+              <div style="margin-bottom:14px;display:flex;align-items:center;gap:10px">
+                <label style="font-size:.78rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;white-space:nowrap">Filtrar por categoria</label>
+                <select id="sel-tabela-cat" onchange="filtrarTabelaCategoria()" style="padding:7px 12px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-size:.88rem;font-family:inherit;outline:none">
+                  <option value="">Geral (todas)</option>
+                </select>
+              </div>
               <div class="forecast-table-wrap">
                 <table class="forecast-table">
-                  <thead><tr><th>Data</th><th>Dia</th><th>Previsão</th><th>Mínimo</th><th>Máximo</th><th>Status</th></tr></thead>
+                  <thead><tr><th>Categoria</th><th>Data</th><th>Dia</th><th>Previsão</th><th>Mínimo</th><th>Máximo</th><th>Status</th></tr></thead>
                   <tbody id="forecast-tbody"></tbody>
                 </table>
               </div>
@@ -1472,6 +1478,7 @@ async function gerarPrevisao() {
     const d = await r.json();
     if (!r.ok) throw new Error(extrairErro(d, 'Erro ao gerar previsão.'));
     state.dadosPrevisao = d;
+    state.dadosPrevisao._categoria = categoria || 'Geral';
     state.chartsRendered = new Set();
     document.getElementById('prev-resultado').style.display = 'block';
     document.getElementById('btn-exportar').style.display   = 'inline-flex';
@@ -1769,7 +1776,39 @@ function renderChartAnual(d) {
 }
 
 function renderTabela(d) {
-  document.getElementById('forecast-tbody').innerHTML = d.forecast.map(f => {
+  // Popula o select de categorias a partir do sel-arquivo (mesmas opções do sel-categoria)
+  const selCat = document.getElementById('sel-tabela-cat');
+  const prev   = selCat.value;
+  const srcOpts = Array.from(document.getElementById('sel-categoria').options).filter(o => o.value);
+  selCat.innerHTML = `<option value="">Geral (todas)</option>` +
+    srcOpts.map(o => `<option value="${esc(o.value)}"${o.value === prev ? ' selected' : ''}>${esc(o.value)}</option>`).join('');
+  _renderTabelaLinhas(selCat.value);
+}
+
+function _renderTabelaLinhas(categoria) {
+  const d = state.dadosPrevisao;
+  if (!d) return;
+  let rows;
+  let catLabel;
+  if (!categoria) {
+    rows     = d.forecast;
+    catLabel = 'Geral';
+  } else {
+    const catObj = (state.categoriasData?.categorias || []).find(c => c.categoria === categoria);
+    if (!catObj) {
+      document.getElementById('forecast-tbody').innerHTML =
+        `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-muted)">Carregando dados de "${esc(categoria)}"...</td></tr>`;
+      _fetchCategoriasData(d).then(() => _renderTabelaLinhas(categoria)).catch(() => {
+        document.getElementById('forecast-tbody').innerHTML =
+          `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--danger)">Erro ao carregar categoria.</td></tr>`;
+      });
+      return;
+    }
+    rows     = catObj.forecast;
+    catLabel = categoria;
+  }
+
+  document.getElementById('forecast-tbody').innerHTML = rows.map(f => {
     let rc = '';
     if (f.is_holiday && !f.alert_type) rc = 'row-holiday';
     if (f.alert_type === 'queda') rc = 'row-queda';
@@ -1781,8 +1820,25 @@ function renderTabela(d) {
     else if (f.alert_type === 'queda')                  badge = `<span class="badge badge-danger">⬇ Queda ${f.alert_pct}%</span>`;
     else if (f.alert_type === 'alta')                   badge = `<span class="badge badge-success">⬆ Alta +${Math.abs(f.alert_pct)}%</span>`;
     else                                                badge = `<span class="badge badge-muted">Normal</span>`;
-    return `<tr class="${rc}"><td style="font-weight:600">${f.ds_br}</td><td style="color:var(--text-muted)">${f.dia_semana}</td><td style="font-weight:700;color:var(--accent)">${fmtR$(f.yhat)}</td><td style="color:var(--text-muted);font-size:.8rem">${fmtR$(f.yhat_lower)}</td><td style="color:var(--text-muted);font-size:.8rem">${fmtR$(f.yhat_upper)}</td><td>${badge}</td></tr>`;
+    const dia    = f.dia_semana  || '—';
+    const minVal = f.yhat_lower != null ? fmtR$(f.yhat_lower) : '—';
+    const maxVal = f.yhat_upper != null ? fmtR$(f.yhat_upper) : '—';
+    return `<tr class="${rc}"><td style="color:var(--text-soft);font-size:.8rem">${esc(catLabel)}</td><td style="font-weight:600">${f.ds_br}</td><td style="color:var(--text-muted)">${dia}</td><td style="font-weight:700;color:var(--accent)">${fmtR$(f.yhat)}</td><td style="color:var(--text-muted);font-size:.8rem">${minVal}</td><td style="color:var(--text-muted);font-size:.8rem">${maxVal}</td><td>${badge}</td></tr>`;
   }).join('');
+}
+
+async function _fetchCategoriasData(d) {
+  if (state.categoriasData) return;
+  let url = `/predict/categorias?dias=${d.dias_previstos}`;
+  if (d.arquivo_id) url += `&arquivo_id=${d.arquivo_id}`;
+  const r    = await authFetch(url);
+  const data = await r.json();
+  if (!r.ok) throw new Error(extrairErro(data, 'Erro ao carregar categorias.'));
+  state.categoriasData = data;
+}
+
+function filtrarTabelaCategoria() {
+  _renderTabelaLinhas(document.getElementById('sel-tabela-cat').value);
 }
 
 /* ── Categorias / Produtos ── */
