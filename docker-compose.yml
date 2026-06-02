@@ -6,9 +6,10 @@ services:
     container_name: visia_postgres_db
     restart: always
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: senha_secreta_123
-      POSTGRES_DB: visia_db
+      # Credenciais vêm de variáveis de ambiente / .env (nunca versione senhas).
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      POSTGRES_DB: ${POSTGRES_DB:-visia_db}
     ports:
       - "5432:5432"
     volumes:

@@ -311,6 +311,27 @@ input,select,textarea{font-family:inherit;outline:none}
 .upload-progress{margin-top:14px;display:none;background:var(--surface3);border-radius:99px;height:4px;overflow:hidden}
 .upload-progress-bar{height:100%;background:var(--accent);border-radius:99px;transition:width .4s ease;width:0}
 
+/* ── Sincronização de pasta ── */
+.sync-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.sync-input{
+  flex:1;min-width:200px;padding:9px 12px;border-radius:9px;border:1px solid var(--border);
+  background:var(--surface2);color:var(--text);font-size:.86rem;font-family:inherit
+}
+.sync-input:focus{outline:none;border-color:var(--accent)}
+.sync-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+.sync-toggle{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:.85rem;color:var(--text-muted)}
+.sync-toggle input{width:15px;height:15px;accent-color:var(--accent);cursor:pointer}
+.sync-item{
+  display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:10px;
+  border:1px solid var(--border);background:var(--surface2);margin-bottom:8px
+}
+.sync-item .si-ico{width:34px;height:34px;flex-shrink:0;display:grid;place-items:center;border-radius:9px;background:var(--accent-glow);color:var(--accent)}
+.sync-item .si-ico svg{width:18px;height:18px}
+.sync-item.si-ausente .si-ico{background:rgba(220,80,80,.12);color:#e06a6a}
+.si-main{flex:1;min-width:0}
+.si-path{font-weight:600;font-size:.88rem;word-break:break-all}
+.si-sub{font-size:.76rem;color:var(--text-muted);margin-top:2px}
+
 .arquivos-table{width:100%;border-collapse:collapse}
 .arquivos-table th{
   text-align:left;padding:10px 14px;font-size:.75rem;font-weight:700;
@@ -713,6 +734,41 @@ input,select,textarea{font-family:inherit;outline:none}
             </div>
           </div>
         </div>
+
+        <!-- ─── Sincronização de pasta do computador ─── -->
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-title">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="18" height="18" style="color:var(--accent);opacity:.85"><path d="M21 12a9 9 0 01-9 9 9 9 0 01-6.36-2.64M3 12a9 9 0 019-9 9 9 0 016.36 2.64"/><polyline points="21 3 21 9 15 9"/><polyline points="3 21 3 15 9 15"/></svg>
+            Sincronizar Pasta do Computador
+          </div>
+          <p style="color:var(--text-muted);font-size:.85rem;margin:-4px 0 14px">
+            Escolha uma pasta do seu computador. O Visia replica a estrutura de subpastas e importa todos os CSVs —
+            e <strong style="color:var(--accent)">acompanha automaticamente</strong> as mudanças feitas nela (novos arquivos, edições e exclusões).
+          </p>
+          <div class="sync-row">
+            <button class="btn btn-ghost btn-sm" onclick="escolherPastaSync()">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+              Escolher pasta...
+            </button>
+            <input type="text" id="sync-path" class="sync-input" placeholder="ou cole o caminho — ex.: C:\Vendas\2024"/>
+            <button class="btn btn-accent btn-sm" onclick="registrarSync()">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12a9 9 0 01-9 9 9 9 0 01-6.36-2.64M3 12a9 9 0 019-9 9 9 0 016.36 2.64"/><polyline points="21 3 21 9 15 9"/><polyline points="3 21 3 15 9 15"/></svg>
+              Sincronizar
+            </button>
+          </div>
+          <div id="sync-raizes-wrap" style="margin-top:14px"></div>
+          <div class="sync-footer">
+            <label class="sync-toggle">
+              <input type="checkbox" id="sync-auto" onchange="toggleAutoSync(this)"/>
+              <span>Acompanhar mudanças automaticamente</span>
+            </label>
+            <button class="btn btn-ghost btn-sm" onclick="sincronizarAgora()">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+              Sincronizar agora
+            </button>
+          </div>
+        </div>
+
         <div class="card">
           <div class="card-title" style="justify-content:space-between">
             <div style="display:flex;align-items:center;gap:8px">
@@ -923,7 +979,7 @@ function navTo(page) {
   document.getElementById('page-' + page).classList.add('active');
   document.querySelector(`.nav-item[data-page="${page}"]`).classList.add('active');
   if (page === 'dashboard') carregarDashboard();
-  if (page === 'dados')   { carregarTabelaArquivos(); carregarVendasManuais(); carregarVendasDatalist(); }
+  if (page === 'dados')   { carregarTabelaArquivos(); carregarVendasManuais(); carregarVendasDatalist(); carregarRaizesSync(); _restaurarAutoSync(); }
   if (page === 'previsao')  carregarArquivosSelect();
 }
 
@@ -1005,6 +1061,7 @@ function loginSuccess(usuario, token) {
 function sair() {
   state = { usuario: null, token: null, dadosPrevisao: null, chartsRendered: new Set() };
   localStorage.removeItem('visia_session');
+  if (_autoSyncIv) { clearInterval(_autoSyncIv); _autoSyncIv = null; }  // para o polling de sync
   mostrarAuth();
 }
 
@@ -1135,6 +1192,142 @@ async function uploadPasta(fileList) {
   carregarTabelaArquivos();
   carregarVendasDatalist();
   carregarDashboard();
+}
+
+/* ── Sincronização de pasta do computador ── */
+let _autoSyncIv = null;
+let _syncEmAndamento = false;   // evita que sincronizações se atropelem
+
+async function escolherPastaSync() {
+  try {
+    const r = await authFetch('/vendas/sincronizacao/selecionar-pasta');
+    if (r.status === 501) {
+      toast('Seletor nativo indisponível aqui — cole o caminho da pasta manualmente.', 'info');
+      document.getElementById('sync-path').focus();
+      return;
+    }
+    const d = await r.json();
+    if (!r.ok) throw new Error(extrairErro(d, 'Não foi possível abrir o seletor.'));
+    if (d.caminho) document.getElementById('sync-path').value = d.caminho;
+    else toast('Nenhuma pasta selecionada.', 'info');
+  } catch (e) { toast('Erro: ' + e.message, 'error'); }
+}
+
+async function registrarSync() {
+  const inp = document.getElementById('sync-path');
+  const caminho = inp.value.trim();
+  if (!caminho) { toast('Informe ou escolha o caminho de uma pasta.', 'error'); return; }
+  toast('Sincronizando pasta...', 'info');
+  try {
+    const r = await authFetch('/vendas/sincronizacao', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ caminho }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(extrairErro(d, 'Erro ao sincronizar.'));
+    toast(d.mensagem || 'Pasta sincronizada!', 'success');
+    inp.value = '';
+    carregarRaizesSync();
+    carregarTabelaArquivos();
+    carregarVendasDatalist();
+    carregarDashboard();
+  } catch (e) { toast('Erro: ' + e.message, 'error'); }
+}
+
+async function carregarRaizesSync() {
+  const wrap = document.getElementById('sync-raizes-wrap');
+  if (!wrap) return;
+  try {
+    const r = await authFetch('/vendas/sincronizacao');
+    const raizes = await r.json();
+    if (!Array.isArray(raizes) || !raizes.length) { wrap.innerHTML = ''; return; }
+    wrap.innerHTML = raizes.map(raiz => {
+      const quando = raiz.ultima_sincronizacao ? fmtDataHora(raiz.ultima_sincronizacao) : 'nunca';
+      const sub = raiz.origem_ausente
+        ? '<span style="color:#e06a6a">⚠ Pasta não encontrada no disco</span>'
+        : `${raiz.total_arquivos} arquivo(s) · sincronizado ${quando}`;
+      return `<div class="sync-item ${raiz.origem_ausente ? 'si-ausente' : ''}">
+        <div class="si-ico">${ICO_FOLDER}</div>
+        <div class="si-main"><div class="si-path">${esc(raiz.caminho)}</div><div class="si-sub">${sub}</div></div>
+        <button class="btn btn-danger btn-sm btn-icon" onclick="removerRaizSync(${raiz.id})" title="Parar de sincronizar">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+        </button>
+      </div>`;
+    }).join('');
+  } catch (_) { wrap.innerHTML = ''; }
+}
+
+async function sincronizarAgora() {
+  if (_syncEmAndamento) { toast('Sincronização já em andamento...', 'info'); return; }
+  _syncEmAndamento = true;
+  try {
+    const r = await authFetch('/vendas/sincronizacao/atualizar', { method: 'POST' });
+    const d = await r.json();
+    if (!r.ok) throw new Error(extrairErro(d, 'Erro ao sincronizar.'));
+    toast(d.mensagem || 'Sincronizado.', d.status === 'vazio' ? 'info' : 'success');
+    carregarRaizesSync();
+    carregarTabelaArquivos();
+    carregarVendasDatalist();
+    carregarDashboard();
+  } catch (e) {
+    toast('Erro: ' + e.message, 'error');
+  } finally {
+    _syncEmAndamento = false;
+  }
+}
+
+/* Sincronização silenciosa (modo automático): só avisa quando algo muda. */
+async function _sincronizarSilencioso() {
+  // Não atropela uma sync em andamento nem roda com a aba em segundo plano.
+  if (_syncEmAndamento || document.hidden || !state.token) return;
+  _syncEmAndamento = true;
+  try {
+    const r = await authFetch('/vendas/sincronizacao/atualizar', { method: 'POST' });
+    if (!r.ok) return;
+    const d = await r.json();
+    const mudou = (d.criados || 0) + (d.atualizados || 0) + (d.removidos || 0);
+    if (mudou) {
+      toast(d.mensagem, 'success');
+      carregarRaizesSync();
+      carregarTabelaArquivos();
+      carregarVendasDatalist();
+      carregarDashboard();
+    }
+  } catch (_) {
+    /* falha transitória de rede: ignora e tenta no próximo ciclo */
+  } finally {
+    _syncEmAndamento = false;
+  }
+}
+
+function toggleAutoSync(el) {
+  if (_autoSyncIv) { clearInterval(_autoSyncIv); _autoSyncIv = null; }
+  localStorage.setItem('visia_autosync', el.checked ? '1' : '0');
+  if (el.checked) {
+    _autoSyncIv = setInterval(_sincronizarSilencioso, 15000);
+    _sincronizarSilencioso();
+  }
+}
+
+function _restaurarAutoSync() {
+  const cb = document.getElementById('sync-auto');
+  if (!cb) return;
+  const on = localStorage.getItem('visia_autosync') === '1';
+  cb.checked = on;
+  if (on && !_autoSyncIv) _autoSyncIv = setInterval(_sincronizarSilencioso, 15000);
+}
+
+async function removerRaizSync(id) {
+  if (!confirm('Parar de sincronizar esta pasta e remover do app os arquivos importados dela?\n\n(Os arquivos no seu computador NÃO são afetados.)')) return;
+  try {
+    const r = await authFetch(`/vendas/sincronizacao/${id}`, { method: 'DELETE' });
+    if (!r.ok && r.status !== 204) throw new Error(extrairErro(await r.json(), 'Erro ao remover.'));
+    toast('Sincronização removida.', 'success');
+    carregarRaizesSync();
+    carregarTabelaArquivos();
+    carregarDashboard();
+  } catch (e) { toast('Erro: ' + e.message, 'error'); }
 }
 
 async function inserirManual() {
@@ -2055,6 +2248,12 @@ function fmtDataBR(d) {
   if (!d) return '—';
   const p = String(d).split('-');
   return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : d;
+}
+function fmtDataHora(s) {
+  if (!s) return '—';
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return s;
+  return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 function esc(s) {
   return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');

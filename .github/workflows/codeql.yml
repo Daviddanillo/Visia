@@ -1,0 +1,33 @@
+name: CodeQL
+
+# 6) SAST aprofundado da GitHub: detecta padrões de bugs e vulnerabilidades
+#    (injeção, path traversal, etc.) analisando o fluxo de dados do código.
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+  schedule:
+    - cron: "0 6 * * 1"  # toda segunda-feira às 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    name: Análise CodeQL (Python)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inicializar CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: python
+          queries: security-and-quality
+      - name: Analisar
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:python"

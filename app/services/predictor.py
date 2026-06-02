@@ -32,7 +32,7 @@ def _calcular_pascoa(ano: int) -> date:
     h = (19 * a + b - d - g + 15) % 30
     i = c // 4
     k = c % 4
-    l = (32 + 2 * e + 2 * i - h - k) % 7
+    l = (32 + 2 * e + 2 * i - h - k) % 7  # noqa: E741 — nomenclatura do algoritmo de Gauss
     m = (a + 11 * h + 22 * l) // 451
     mes = (h + l - 7 * m + 114) // 31
     dia = ((h + l - 7 * m + 114) % 31) + 1

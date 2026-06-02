@@ -15,3 +15,6 @@ class Usuario(Base):
     vendas = relationship("Venda", back_populates="usuario", cascade="all, delete-orphan")
     arquivos = relationship("UploadArquivo", back_populates="usuario", cascade="all, delete-orphan")
     pastas = relationship("Pasta", back_populates="usuario", cascade="all, delete-orphan")
+    raizes_sincronizadas = relationship(
+        "RaizSincronizada", back_populates="usuario", cascade="all, delete-orphan"
+    )

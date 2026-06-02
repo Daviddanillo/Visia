@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 
 from pydantic import BaseModel, Field
@@ -38,6 +38,8 @@ class ArquivoResposta(BaseModel):
     nome_arquivo: str
     data_upload: date
     pasta_id: Optional[int] = None
+    # Caminho no disco quando o arquivo veio de uma pasta sincronizada.
+    caminho_origem: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -67,6 +69,8 @@ class PastaResposta(BaseModel):
     id: int
     nome: str
     parent_id: Optional[int] = None
+    # Preenchido quando a pasta espelha um diretório sincronizado do disco.
+    caminho_origem: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -89,3 +93,33 @@ class StatsResposta(BaseModel):
     media_diaria: float
     total_arquivos: int
     ultimo_upload: Optional[str]
+
+
+# ── Sincronização de pasta do computador ─────────────────────────────────────
+
+class RaizCriar(BaseModel):
+    caminho: str = Field(..., min_length=1, description="Caminho da pasta no disco")
+
+
+class RaizResposta(BaseModel):
+    id: int
+    caminho: str
+    pasta_id: Optional[int] = None
+    ultima_sincronizacao: Optional[datetime] = None
+    total_arquivos: int = 0
+    origem_ausente: bool = False
+
+    model_config = {"from_attributes": True}
+
+
+class SincronizacaoResposta(BaseModel):
+    status: str
+    mensagem: str
+    criados: int = 0
+    atualizados: int = 0
+    removidos: int = 0
+    raizes_ausentes: list[str] = []
+
+
+class DialogoPastaResposta(BaseModel):
+    caminho: Optional[str] = None

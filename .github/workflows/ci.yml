@@ -1,0 +1,94 @@
+name: CI
+
+# Pipeline de qualidade e segurança do Visia.
+# Cada "job" abaixo é um caso de teste automatizado executado a cada push/PR.
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # ── 1) Lint: estilo e erros de código (ruff) ───────────────────────────────
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Instalar ruff
+        run: pip install ruff
+      - name: Rodar ruff
+        run: ruff check .
+
+  # ── 2) SAST: análise estática de segurança do código (bandit) ──────────────
+  sast:
+    name: SAST (bandit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Instalar bandit
+        run: pip install "bandit[toml]"
+      - name: Rodar bandit (falha em severidade média ou alta)
+        run: bandit -r app/ -c pyproject.toml -ll
+
+  # ── 3) Scan de segredos: senhas/chaves vazadas (detect-secrets) ────────────
+  secret-scan:
+    name: Scan de segredos (detect-secrets)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Instalar detect-secrets
+        run: pip install detect-secrets
+      - name: Verificar segredos nos arquivos versionados
+        run: git ls-files -z | xargs -0 detect-secrets-hook --baseline .secrets.baseline
+
+  # ── 4) Auditoria de dependências: CVEs conhecidas (pip-audit) ──────────────
+  #     Advisória: reporta vulnerabilidades sem bloquear o merge, pois algumas
+  #     correções dependem de subir o FastAPI/Starlette (mudança maior).
+  dependency-audit:
+    name: Auditoria de dependências (pip-audit)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Instalar pip-audit
+        run: pip install pip-audit
+      - name: Auditar requirements.txt
+        run: pip-audit -r requirements.txt --desc
+
+  # ── 5) Testes automatizados (pytest) ───────────────────────────────────────
+  tests:
+    name: Testes (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Instalar dependências
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Rodar suíte de testes
+        run: pytest

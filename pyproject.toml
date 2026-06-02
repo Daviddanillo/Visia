@@ -1,0 +1,28 @@
+[project]
+name = "visia-intelligence"
+version = "2.0.0"
+description = "Previsão inteligente de vendas com sazonalidade e feriados brasileiros."
+requires-python = ">=3.11"
+
+# ── Ruff: linter de estilo e erros (job "lint" do CI) ────────────────────────
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+extend-exclude = ["_setup_ia.py"]
+
+[tool.ruff.lint]
+# E/W: pycodestyle (estilo) · F: pyflakes (erros reais: imports/vars não usados)
+select = ["E", "W", "F"]
+ignore = [
+    "E501",  # comprimento de linha — o projeto usa alinhamento visual em alguns blocos
+]
+
+# ── pytest (job "tests" do CI) ───────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+# ── Bandit: SAST de segurança (job "sast" do CI) ─────────────────────────────
+[tool.bandit]
+exclude_dirs = ["tests", ".venv", "venv"]

@@ -1,7 +1,8 @@
 import io
 import logging
+import os
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import pandas as pd
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
@@ -10,15 +11,19 @@ from sqlalchemy.orm import Session
 from app.core.security import get_current_user
 from app.db.database import get_db
 from app.models.usuario import Usuario
-from app.models.venda import Pasta, UploadArquivo, Venda
+from app.models.venda import Pasta, RaizSincronizada, UploadArquivo, Venda
 from app.schemas.venda import (
     ArquivoAtualizar,
     ArquivoResposta,
     CategoriaResposta,
+    DialogoPastaResposta,
     ImportacaoResposta,
     PastaAtualizar,
     PastaCriar,
     PastaResposta,
+    RaizCriar,
+    RaizResposta,
+    SincronizacaoResposta,
     StatsResposta,
     VendaAtualizar,
     VendaCriar,
@@ -78,6 +83,108 @@ def _limpar_valor(serie: pd.Series) -> pd.Series:
             .str.replace(r"\.(?=\d{3})", "", regex=True)
             .str.replace(",", ".", regex=False),
         errors="coerce",
+    )
+
+
+# ── Parsing de CSV (reutilizado por upload e por sincronização de pasta) ──────
+
+def _parse_csv(conteudo: bytes) -> pd.DataFrame:
+    """Lê os bytes de um CSV em DataFrame, detectando o separador automaticamente."""
+    try:
+        df = pd.read_csv(io.BytesIO(conteudo), sep=None, engine="python")
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Arquivo CSV inválido: {exc}")
+    if df.empty:
+        raise HTTPException(status_code=400, detail="O arquivo está vazio.")
+    return df
+
+
+def _consolidar(df: pd.DataFrame) -> Tuple[pd.DataFrame, bool, list, Optional[str], Optional[str]]:
+    """Normaliza colunas, detecta data/valor/categoria e consolida por dia.
+
+    Retorna ``(consolidado, tem_categorias, categorias_detectadas,
+    col_valor_detectada, col_categoria_detectada)``.
+    """
+    df = df.copy()
+    df.columns = [str(c).strip().lower().replace('"', "").replace("'", "") for c in df.columns]
+    cols = df.columns.tolist()
+    # A coluna de data é detectada primeiro e excluída das demais buscas — assim
+    # nomes como "data_venda" não são confundidos com a coluna de valor ("venda").
+    col_data       = _detectar_coluna(cols, _SINONIMOS_DATA)
+    ja_usadas      = {col_data} if col_data else set()
+    col_valor      = _detectar_coluna(cols, _SINONIMOS_VALOR, excluir=ja_usadas)
+    if col_valor:
+        ja_usadas = ja_usadas | {col_valor}
+    col_quantidade = _detectar_coluna(cols, _SINONIMOS_QUANTIDADE, excluir=ja_usadas)
+    if col_quantidade:
+        ja_usadas = ja_usadas | {col_quantidade}
+    col_categoria  = _detectar_coluna(
+        cols, _SINONIMOS_CATEGORIA, bloqueio=_BLOQUEIO_CATEGORIA, excluir=ja_usadas
+    )
+
+    trabalho = pd.DataFrame()
+    trabalho["data_venda"] = (
+        pd.to_datetime(df[col_data], errors="coerce").dt.date
+        if col_data else datetime.now().date()
+    )
+
+    # ── Valor: prioriza coluna monetária; senão usa quantidade; senão peso unitário ──
+    if col_valor:
+        trabalho["valor"] = (
+            _limpar_valor(df[col_valor])
+            if df[col_valor].dtype == object
+            else pd.to_numeric(df[col_valor], errors="coerce")
+        )
+    elif col_quantidade:
+        logger.info("Sem coluna de valor; usando quantidade '%s' como métrica.", col_quantidade)
+        trabalho["valor"] = pd.to_numeric(df[col_quantidade], errors="coerce")
+    else:
+        logger.warning("Coluna de valor não detectada. Usando peso unitário 1.0 por linha.")
+        trabalho["valor"] = 1.0
+
+    # ── Categoria: opcional. Se ausente, o sistema funciona só com números ──
+    tem_categorias = col_categoria is not None
+    if tem_categorias:
+        trabalho["categoria"] = (
+            df[col_categoria].astype(str).str.strip().replace({"": None, "nan": None})
+        )
+    else:
+        trabalho["categoria"] = None
+
+    trabalho["data_venda"] = trabalho["data_venda"].fillna(datetime.now().date())
+    trabalho["valor"]      = trabalho["valor"].fillna(0.0)
+
+    # ── Consolida por dia (+ categoria, quando houver) ──
+    if tem_categorias:
+        trabalho["categoria"] = trabalho["categoria"].fillna("Sem categoria")
+        consolidado = (
+            trabalho.groupby(["data_venda", "categoria"])["valor"].sum().reset_index()
+        )
+        categorias_detectadas = sorted(
+            c for c in consolidado["categoria"].unique() if c and c != "Sem categoria"
+        )[:50]
+    else:
+        consolidado = trabalho.groupby("data_venda")["valor"].sum().reset_index()
+        consolidado["categoria"] = None
+        categorias_detectadas = []
+
+    return consolidado, tem_categorias, categorias_detectadas, (col_valor or col_quantidade), col_categoria
+
+
+def _inserir_vendas(arquivo: UploadArquivo, consolidado: pd.DataFrame, usuario: Usuario, db: Session) -> None:
+    """Insere as linhas consolidadas como vendas vinculadas ao arquivo."""
+    db.bulk_insert_mappings(
+        Venda,
+        [
+            {
+                "data_venda": row.data_venda,
+                "valor":      float(row.valor),
+                "categoria":  row.categoria,
+                "usuario_id": usuario.id,
+                "arquivo_id": arquivo.id,
+            }
+            for row in consolidado.itertuples(index=False)
+        ],
     )
 
 
@@ -275,6 +382,406 @@ def deletar_pasta(
     db.commit()
 
 
+# ── Sincronização com pasta do computador ────────────────────────────────────
+
+def _norm(caminho: str) -> str:
+    """Caminho absoluto e normalizado (preservando a capitalização original)."""
+    return os.path.normpath(os.path.abspath(caminho))
+
+
+def _sob(caminho: Optional[str], base: str) -> bool:
+    """True se ``caminho`` é ``base`` ou está contido dentro de ``base``."""
+    if not caminho:
+        return False
+    c = os.path.normcase(_norm(caminho))
+    b = os.path.normcase(_norm(base))
+    return c == b or c.startswith(b + os.sep)
+
+
+def _nome_dir(caminho: str) -> str:
+    """Nome exibível de um diretório (cai para o caminho em raízes de disco)."""
+    return os.path.basename(caminho) or caminho
+
+
+def _importar_arquivo_disco(
+    caminho: str,
+    pasta_id: Optional[int],
+    usuario: Usuario,
+    db: Session,
+    arquivo: Optional[UploadArquivo] = None,
+) -> UploadArquivo:
+    """Importa/atualiza um CSV do disco, vinculando-o à pasta espelhada.
+
+    Quando ``arquivo`` é informado, reimporta o conteúdo (apaga as vendas
+    antigas e insere as novas), mantendo o mesmo registro.
+    """
+    with open(caminho, "rb") as fh:
+        conteudo = fh.read()
+    consolidado, *_ = _consolidar(_parse_csv(conteudo))
+    nome  = os.path.basename(caminho)
+    mtime = os.path.getmtime(caminho)
+
+    if arquivo is None:
+        arquivo = UploadArquivo(
+            nome_arquivo=nome,
+            data_upload=datetime.now().date(),
+            usuario_id=usuario.id,
+            pasta_id=pasta_id,
+            caminho_origem=caminho,
+            mtime_origem=mtime,
+        )
+        db.add(arquivo)
+        db.flush()
+    else:
+        db.query(Venda).filter(Venda.arquivo_id == arquivo.id).delete(synchronize_session=False)
+        arquivo.nome_arquivo   = nome
+        arquivo.pasta_id       = pasta_id
+        arquivo.caminho_origem = caminho
+        arquivo.mtime_origem   = mtime
+
+    _inserir_vendas(arquivo, consolidado, usuario, db)
+    return arquivo
+
+
+def _sincronizar_raiz(raiz: RaizSincronizada, usuario: Usuario, db: Session) -> dict:
+    """Reflete no banco o estado atual da pasta do disco apontada por ``raiz``.
+
+    Cria pastas/arquivos novos, reimporta os modificados (por data de
+    modificação) e remove os que deixaram de existir no disco.
+    """
+    resultado = {"criados": 0, "atualizados": 0, "removidos": 0, "ausente": False}
+    base = _norm(raiz.caminho)
+    if not os.path.isdir(base):
+        resultado["ausente"] = True
+        return resultado
+
+    # Espelhos já existentes pertencentes a esta raiz (indexados por caminho).
+    pastas_mirror = {
+        os.path.normcase(p.caminho_origem): p
+        for p in db.query(Pasta).filter(
+            Pasta.usuario_id == usuario.id, Pasta.caminho_origem.isnot(None)
+        ).all()
+        if _sob(p.caminho_origem, base)
+    }
+    arquivos_mirror = {
+        os.path.normcase(a.caminho_origem): a
+        for a in db.query(UploadArquivo).filter(
+            UploadArquivo.usuario_id == usuario.id, UploadArquivo.caminho_origem.isnot(None)
+        ).all()
+        if _sob(a.caminho_origem, base)
+    }
+
+    vistos_pastas: set = set()
+    vistos_arquivos: set = set()
+    mapa_dir: dict = {}  # normcase(dir) -> Pasta
+
+    # Pasta raiz do espelho.
+    base_c = os.path.normcase(base)
+    root_pasta = db.get(Pasta, raiz.pasta_id) if raiz.pasta_id else None
+    if root_pasta is None:
+        root_pasta = pastas_mirror.get(base_c)
+    if root_pasta is None:
+        root_pasta = Pasta(nome=_nome_dir(base), parent_id=None, usuario_id=usuario.id, caminho_origem=base)
+        db.add(root_pasta)
+        db.flush()
+    root_pasta.nome           = _nome_dir(base)
+    root_pasta.caminho_origem = base
+    raiz.pasta_id             = root_pasta.id
+    mapa_dir[base_c] = root_pasta
+    vistos_pastas.add(base_c)
+
+    for dirpath, dirnames, filenames in os.walk(base):
+        dirnames.sort()
+        dn  = _norm(dirpath)
+        dnc = os.path.normcase(dn)
+        pasta_atual = mapa_dir.get(dnc)
+        if pasta_atual is None:
+            parent = mapa_dir.get(os.path.normcase(_norm(os.path.dirname(dn))))
+            parent_id = parent.id if parent else None
+            pasta_atual = pastas_mirror.get(dnc)
+            if pasta_atual is not None:
+                pasta_atual.nome           = _nome_dir(dn)
+                pasta_atual.parent_id      = parent_id
+                pasta_atual.caminho_origem = dn
+            else:
+                pasta_atual = Pasta(
+                    nome=_nome_dir(dn), parent_id=parent_id,
+                    usuario_id=usuario.id, caminho_origem=dn,
+                )
+                db.add(pasta_atual)
+                db.flush()
+            mapa_dir[dnc] = pasta_atual
+        vistos_pastas.add(dnc)
+
+        for fn in sorted(filenames):
+            if not fn.lower().endswith(".csv"):
+                continue
+            full  = _norm(os.path.join(dn, fn))
+            fullc = os.path.normcase(full)
+            try:
+                mtime = os.path.getmtime(full)
+            except OSError:
+                continue
+            arq = arquivos_mirror.get(fullc)
+            try:
+                if arq is None:
+                    _importar_arquivo_disco(full, pasta_atual.id, usuario, db)
+                    resultado["criados"] += 1
+                elif (arq.mtime_origem or 0.0) < mtime - 1e-6:
+                    _importar_arquivo_disco(full, pasta_atual.id, usuario, db, arquivo=arq)
+                    resultado["atualizados"] += 1
+                else:
+                    arq.pasta_id     = pasta_atual.id
+                    arq.nome_arquivo = fn
+                vistos_arquivos.add(fullc)
+            except HTTPException:
+                # CSV inválido/vazio: ignora o arquivo e segue com o restante.
+                logger.warning("Sincronização ignorou CSV inválido: %s", full)
+                if arq is not None:
+                    vistos_arquivos.add(fullc)  # mantém o registro antigo
+
+    # ── Remoções: o que sumiu do disco é removido do app ──
+    for chave, arq in arquivos_mirror.items():
+        if chave not in vistos_arquivos:
+            db.delete(arq)
+            resultado["removidos"] += 1
+
+    sumidas = [p for c, p in pastas_mirror.items() if c not in vistos_pastas]
+    ids_sumidas = {p.id for p in sumidas}
+    if ids_sumidas:
+        # Arquivos não-sincronizados (movidos manualmente p/ dentro) voltam à raiz.
+        db.query(UploadArquivo).filter(
+            UploadArquivo.usuario_id == usuario.id,
+            UploadArquivo.pasta_id.in_(ids_sumidas),
+        ).update({UploadArquivo.pasta_id: None}, synchronize_session=False)
+    # Remove das subpastas mais profundas para as mais rasas (evita conflito de cascade).
+    for p in sorted(sumidas, key=lambda x: len(x.caminho_origem or ""), reverse=True):
+        db.delete(p)
+
+    raiz.ultima_sincronizacao = datetime.now()
+    db.commit()
+    return resultado
+
+
+# Script do seletor: roda em um PROCESSO separado para que o Tkinter use sua
+# própria thread principal. Assim, se a janela travar ou falhar, ela nunca
+# derruba o servidor uvicorn (evita "Failed to fetch" em toda a aplicação).
+_SCRIPT_SELETOR_PASTA = (
+    "import tkinter as tk\n"
+    "from tkinter import filedialog\n"
+    "r = tk.Tk(); r.withdraw()\n"
+    "try:\n"
+    "    r.attributes('-topmost', True)\n"
+    "except Exception:\n"
+    "    pass\n"
+    "c = filedialog.askdirectory(title='Escolha a pasta para sincronizar com o Visia')\n"
+    "r.destroy()\n"
+    "print(c or '')\n"
+)
+
+
+@router.get("/sincronizacao/selecionar-pasta", response_model=DialogoPastaResposta)
+def selecionar_pasta(usuario: Usuario = Depends(get_current_user)):
+    """Abre o seletor de pastas nativo do sistema (app rodando localmente).
+
+    O diálogo roda em um subprocesso isolado. Se o ambiente não tiver interface
+    gráfica (ex.: servidor remoto), responde 501 para o cliente cair no campo manual.
+    """
+    import subprocess
+    import sys
+
+    try:
+        proc = subprocess.run(
+            [sys.executable, "-c", _SCRIPT_SELETOR_PASTA],
+            capture_output=True,
+            text=True,
+            timeout=300,  # tempo para o usuário escolher a pasta
+        )
+    except Exception as exc:  # pragma: no cover — depende do ambiente
+        logger.warning("Diálogo nativo de pasta indisponível: %s", exc)
+        raise HTTPException(
+            status_code=501,
+            detail="Seleção nativa indisponível neste ambiente. Cole o caminho da pasta manualmente.",
+        )
+
+    if proc.returncode != 0:
+        logger.warning("Seletor de pasta falhou (rc=%s): %s", proc.returncode, proc.stderr.strip())
+        raise HTTPException(
+            status_code=501,
+            detail="Seleção nativa indisponível neste ambiente. Cole o caminho da pasta manualmente.",
+        )
+
+    linhas = [ln.strip() for ln in (proc.stdout or "").splitlines() if ln.strip()]
+    caminho = linhas[-1] if linhas else ""
+    return DialogoPastaResposta(caminho=_norm(caminho) if caminho else None)
+
+
+def _montar_raiz_resposta(raiz: RaizSincronizada, usuario: Usuario, db: Session) -> RaizResposta:
+    total = (
+        db.query(UploadArquivo)
+        .filter(UploadArquivo.usuario_id == usuario.id, UploadArquivo.caminho_origem.isnot(None))
+        .all()
+    )
+    return RaizResposta(
+        id=raiz.id,
+        caminho=raiz.caminho,
+        pasta_id=raiz.pasta_id,
+        ultima_sincronizacao=raiz.ultima_sincronizacao,
+        total_arquivos=sum(1 for a in total if _sob(a.caminho_origem, raiz.caminho)),
+        origem_ausente=not os.path.isdir(raiz.caminho),
+    )
+
+
+@router.get("/sincronizacao", response_model=List[RaizResposta])
+def listar_raizes(
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    raizes = (
+        db.query(RaizSincronizada)
+        .filter(RaizSincronizada.usuario_id == usuario.id)
+        .order_by(RaizSincronizada.id.asc())
+        .all()
+    )
+    return [_montar_raiz_resposta(r, usuario, db) for r in raizes]
+
+
+@router.post("/sincronizacao", response_model=SincronizacaoResposta, status_code=status.HTTP_201_CREATED)
+def criar_sincronizacao(
+    dados: RaizCriar,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    """Registra uma pasta do computador e faz a primeira sincronização."""
+    caminho = _norm(dados.caminho.strip())
+    if not os.path.isdir(caminho):
+        raise HTTPException(status_code=400, detail="Caminho não encontrado ou não é uma pasta.")
+
+    existentes = (
+        db.query(RaizSincronizada).filter(RaizSincronizada.usuario_id == usuario.id).all()
+    )
+    for r in existentes:
+        if _sob(caminho, r.caminho) or _sob(r.caminho, caminho):
+            raise HTTPException(
+                status_code=400,
+                detail="Esta pasta (ou uma que a contém) já está sincronizada.",
+            )
+
+    raiz = RaizSincronizada(caminho=caminho, usuario_id=usuario.id)
+    db.add(raiz)
+    db.flush()
+    res = _sincronizar_raiz(raiz, usuario, db)
+    return SincronizacaoResposta(
+        status="sucesso",
+        mensagem=f"Pasta sincronizada: {res['criados']} arquivo(s) importado(s).",
+        criados=res["criados"],
+        atualizados=res["atualizados"],
+        removidos=res["removidos"],
+    )
+
+
+@router.post("/sincronizacao/atualizar", response_model=SincronizacaoResposta)
+def atualizar_sincronizacao(
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    """Reexamina todas as pastas sincronizadas e aplica as mudanças do disco."""
+    raizes = (
+        db.query(RaizSincronizada).filter(RaizSincronizada.usuario_id == usuario.id).all()
+    )
+    if not raizes:
+        return SincronizacaoResposta(status="vazio", mensagem="Nenhuma pasta sincronizada.")
+
+    criados = atualizados = removidos = 0
+    ausentes: list = []
+    for r in raizes:
+        res = _sincronizar_raiz(r, usuario, db)
+        if res["ausente"]:
+            ausentes.append(r.caminho)
+            continue
+        criados     += res["criados"]
+        atualizados += res["atualizados"]
+        removidos   += res["removidos"]
+
+    partes = []
+    if criados:
+        partes.append(f"{criados} novo(s)")
+    if atualizados:
+        partes.append(f"{atualizados} atualizado(s)")
+    if removidos:
+        partes.append(f"{removidos} removido(s)")
+    msg = "Tudo sincronizado." if not partes else "Sincronizado: " + ", ".join(partes) + "."
+    if ausentes:
+        msg += f" {len(ausentes)} pasta(s) não encontrada(s) no disco."
+
+    return SincronizacaoResposta(
+        status="sucesso",
+        mensagem=msg,
+        criados=criados,
+        atualizados=atualizados,
+        removidos=removidos,
+        raizes_ausentes=ausentes,
+    )
+
+
+@router.delete("/sincronizacao/{raiz_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remover_sincronizacao(
+    raiz_id: int,
+    manter_dados: bool = False,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    """Para de sincronizar uma pasta.
+
+    Por padrão remove do app o espelho (pastas e arquivos importados dela).
+    Com ``manter_dados=true`` os dados ficam, apenas desvinculados da origem.
+    """
+    raiz = (
+        db.query(RaizSincronizada)
+        .filter(RaizSincronizada.id == raiz_id, RaizSincronizada.usuario_id == usuario.id)
+        .first()
+    )
+    if not raiz:
+        raise HTTPException(status_code=404, detail="Pasta sincronizada não encontrada.")
+
+    base = raiz.caminho
+    arquivos = [
+        a for a in db.query(UploadArquivo).filter(
+            UploadArquivo.usuario_id == usuario.id, UploadArquivo.caminho_origem.isnot(None)
+        ).all()
+        if _sob(a.caminho_origem, base)
+    ]
+    pastas = [
+        p for p in db.query(Pasta).filter(
+            Pasta.usuario_id == usuario.id, Pasta.caminho_origem.isnot(None)
+        ).all()
+        if _sob(p.caminho_origem, base)
+    ]
+
+    if manter_dados:
+        # Mantém os dados, apenas desvincula da origem (vira conteúdo "normal").
+        for a in arquivos:
+            a.caminho_origem = None
+            a.mtime_origem = None
+        for p in pastas:
+            p.caminho_origem = None
+    else:
+        for a in arquivos:
+            db.delete(a)
+        ids = {p.id for p in pastas}
+        if ids:
+            db.query(UploadArquivo).filter(
+                UploadArquivo.usuario_id == usuario.id,
+                UploadArquivo.pasta_id.in_(ids),
+            ).update({UploadArquivo.pasta_id: None}, synchronize_session=False)
+        for p in sorted(pastas, key=lambda x: len(x.caminho_origem or ""), reverse=True):
+            db.delete(p)
+
+    raiz.pasta_id = None
+    db.delete(raiz)
+    db.commit()
+
+
 # ── Categorias (definido antes de /{venda_id}) ───────────────────────────────
 
 @router.get("/categorias", response_model=List[CategoriaResposta])
@@ -353,75 +860,8 @@ async def importar_csv(
     usuario: Usuario = Depends(get_current_user),
 ):
     conteudo = await file.read()
-    try:
-        df = pd.read_csv(io.BytesIO(conteudo), sep=None, engine="python")
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=f"Arquivo CSV inválido: {exc}")
-
-    if df.empty:
-        raise HTTPException(status_code=400, detail="O arquivo está vazio.")
-
-    df.columns = [str(c).strip().lower().replace('"', "").replace("'", "") for c in df.columns]
-    cols = df.columns.tolist()
-    # A coluna de data é detectada primeiro e excluída das demais buscas — assim
-    # nomes como "data_venda" não são confundidos com a coluna de valor ("venda").
-    col_data       = _detectar_coluna(cols, _SINONIMOS_DATA)
-    ja_usadas      = {col_data} if col_data else set()
-    col_valor      = _detectar_coluna(cols, _SINONIMOS_VALOR, excluir=ja_usadas)
-    if col_valor:
-        ja_usadas = ja_usadas | {col_valor}
-    col_quantidade = _detectar_coluna(cols, _SINONIMOS_QUANTIDADE, excluir=ja_usadas)
-    if col_quantidade:
-        ja_usadas = ja_usadas | {col_quantidade}
-    col_categoria  = _detectar_coluna(
-        cols, _SINONIMOS_CATEGORIA, bloqueio=_BLOQUEIO_CATEGORIA, excluir=ja_usadas
-    )
-
-    trabalho = pd.DataFrame()
-    trabalho["data_venda"] = (
-        pd.to_datetime(df[col_data], errors="coerce").dt.date
-        if col_data else datetime.now().date()
-    )
-
-    # ── Valor: prioriza coluna monetária; senão usa quantidade; senão peso unitário ──
-    if col_valor:
-        trabalho["valor"] = (
-            _limpar_valor(df[col_valor])
-            if df[col_valor].dtype == object
-            else pd.to_numeric(df[col_valor], errors="coerce")
-        )
-    elif col_quantidade:
-        logger.info("Sem coluna de valor; usando quantidade '%s' como métrica.", col_quantidade)
-        trabalho["valor"] = pd.to_numeric(df[col_quantidade], errors="coerce")
-    else:
-        logger.warning("Coluna de valor não detectada. Usando peso unitário 1.0 por linha.")
-        trabalho["valor"] = 1.0
-
-    # ── Categoria: opcional. Se ausente, o sistema funciona só com números ──
-    tem_categorias = col_categoria is not None
-    if tem_categorias:
-        trabalho["categoria"] = (
-            df[col_categoria].astype(str).str.strip().replace({"": None, "nan": None})
-        )
-    else:
-        trabalho["categoria"] = None
-
-    trabalho["data_venda"] = trabalho["data_venda"].fillna(datetime.now().date())
-    trabalho["valor"]      = trabalho["valor"].fillna(0.0)
-
-    # ── Consolida por dia (+ categoria, quando houver) ──
-    if tem_categorias:
-        trabalho["categoria"] = trabalho["categoria"].fillna("Sem categoria")
-        consolidado = (
-            trabalho.groupby(["data_venda", "categoria"])["valor"].sum().reset_index()
-        )
-        categorias_detectadas = sorted(
-            c for c in consolidado["categoria"].unique() if c and c != "Sem categoria"
-        )[:50]
-    else:
-        consolidado = trabalho.groupby("data_venda")["valor"].sum().reset_index()
-        consolidado["categoria"] = None
-        categorias_detectadas = []
+    df = _parse_csv(conteudo)
+    consolidado, tem_categorias, categorias_detectadas, col_valor, col_categoria = _consolidar(df)
 
     arquivo = UploadArquivo(
         nome_arquivo=file.filename,
@@ -431,19 +871,7 @@ async def importar_csv(
     db.add(arquivo)
     db.flush()
 
-    db.bulk_insert_mappings(
-        Venda,
-        [
-            {
-                "data_venda": row.data_venda,
-                "valor":      float(row.valor),
-                "categoria":  row.categoria,
-                "usuario_id": usuario.id,
-                "arquivo_id": arquivo.id,
-            }
-            for row in consolidado.itertuples(index=False)
-        ],
-    )
+    _inserir_vendas(arquivo, consolidado, usuario, db)
     db.commit()
 
     if tem_categorias:
@@ -461,7 +889,7 @@ async def importar_csv(
         arquivo_id=arquivo.id,
         tem_categorias=tem_categorias,
         categorias_detectadas=categorias_detectadas,
-        coluna_valor_detectada=col_valor or col_quantidade,
+        coluna_valor_detectada=col_valor,
         coluna_categoria_detectada=col_categoria,
     )
 

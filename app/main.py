@@ -50,8 +50,32 @@ def _migrar_coluna_pasta_id() -> None:
         logging.warning("Não foi possível migrar a coluna 'pasta_id': %s", exc)
 
 
+def _migrar_colunas_sincronizacao() -> None:
+    """Adiciona as colunas de sincronização de pastas do disco em bancos antigos.
+
+    `create_all` cria a tabela `raizes_sincronizadas`, mas não altera as tabelas
+    `pastas`/`uploads_arquivos` já existentes; aqui garantimos as novas colunas.
+    """
+    alteracoes = [
+        ("pastas", "caminho_origem", "VARCHAR"),
+        ("uploads_arquivos", "caminho_origem", "VARCHAR"),
+        ("uploads_arquivos", "mtime_origem", "FLOAT"),
+    ]
+    try:
+        inspetor = inspect(engine)
+        for tabela, coluna, tipo in alteracoes:
+            colunas = {c["name"] for c in inspetor.get_columns(tabela)}
+            if coluna not in colunas:
+                with engine.begin() as conn:
+                    conn.execute(text(f"ALTER TABLE {tabela} ADD COLUMN {coluna} {tipo}"))
+                logging.info("Migração: coluna '%s' adicionada à tabela '%s'.", coluna, tabela)
+    except Exception as exc:  # pragma: no cover — best-effort
+        logging.warning("Não foi possível migrar colunas de sincronização: %s", exc)
+
+
 _migrar_coluna_categoria()
 _migrar_coluna_pasta_id()
+_migrar_colunas_sincronizacao()
 
 app = FastAPI(
     title="Visia Intelligence API",
