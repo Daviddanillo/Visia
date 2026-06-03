@@ -1,0 +1,11 @@
+# Normaliza quebras de linha: o repositório guarda sempre LF.
+* text=auto eol=lf
+
+# Arquivos que DEVEM manter o padrão da plataforma:
+*.bat text eol=crlf
+
+# Binários (não converter):
+*.db   binary
+*.png  binary
+*.jpg  binary
+*.ico  binary

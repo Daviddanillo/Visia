@@ -4,10 +4,14 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from sqlalchemy import inspect, text
 
 import app.models  # noqa: F401 — registra modelos no metadata do SQLAlchemy
+from app.core.config import settings
+from app.core.ratelimit import limiter
 from app.db.database import Base, engine
 from app.routers import auth_router, predict_router, venda_router
 
@@ -83,9 +87,20 @@ app = FastAPI(
     version="2.0.0",
 )
 
+# Rate limiting (proteção contra força bruta — ver app/core/ratelimit.py)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# A UI é servida pelo próprio app (mesma origem), mas para clientes externos da
+# API liberamos as origens configuradas + a URL pública do Render, se houver.
+_origens = list(settings.origens_permitidas)
+_render_url = os.environ.get("RENDER_EXTERNAL_URL")
+if _render_url and _render_url not in _origens:
+    _origens.append(_render_url)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_origens,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

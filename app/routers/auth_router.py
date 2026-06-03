@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
+from app.core.ratelimit import limiter
 from app.core.security import criar_token, get_current_user, hash_senha, verificar_senha
 from app.db.database import get_db
 from app.models.usuario import Usuario
@@ -16,7 +17,8 @@ router = APIRouter(prefix="/auth", tags=["Autenticação"])
 
 
 @router.post("/cadastro", response_model=UsuarioResposta, status_code=status.HTTP_201_CREATED)
-def cadastrar(dados: UsuarioCriar, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def cadastrar(request: Request, dados: UsuarioCriar, db: Session = Depends(get_db)):
     if db.query(Usuario).filter(Usuario.email == dados.email).first():
         raise HTTPException(status_code=400, detail="E-mail já cadastrado.")
     usuario = Usuario(
@@ -31,7 +33,8 @@ def cadastrar(dados: UsuarioCriar, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResposta)
-def login(dados: LoginRequest, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def login(request: Request, dados: LoginRequest, db: Session = Depends(get_db)):
     usuario = db.query(Usuario).filter(Usuario.email == dados.email).first()
     if not usuario or not verificar_senha(dados.senha, usuario.senha_hash):
         raise HTTPException(

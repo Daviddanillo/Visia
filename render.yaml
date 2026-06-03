@@ -1,0 +1,31 @@
+# Blueprint do Render — cria o serviço web (Docker) + banco PostgreSQL.
+# No painel do Render: New + > Blueprint > selecione o repositório.
+services:
+  - type: web
+    name: visia
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free            # Prophet usa memória; p/ uso real prefira "standard" (2GB)
+    region: oregon
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: SECRET_KEY            # gerado automaticamente e seguro
+        generateValue: true
+      - key: ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "60"
+      - key: ALLOWED_ORIGINS       # opcional; a URL do Render já é liberada sozinha
+        sync: false
+      - key: DATABASE_URL          # injetada a partir do banco abaixo
+        fromDatabase:
+          name: visia-db
+          property: connectionString
+
+databases:
+  - name: visia-db
+    plan: free                     # Postgres grátis (expira ~30 dias; depois faça upgrade)
+    databaseName: visia_db
+    user: visia
+    region: oregon

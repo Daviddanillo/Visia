@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.security import get_current_user
@@ -13,7 +13,7 @@ router = APIRouter(prefix="/predict", tags=["Previsão IA"])
 
 @router.get("/")
 def prever_vendas(
-    dias: int = 30,
+    dias: int = Query(30, ge=1, le=365),
     arquivo_id: Optional[int] = None,
     categoria: Optional[str] = None,
     db: Session = Depends(get_db),
@@ -33,7 +33,7 @@ def prever_vendas(
 
 @router.get("/categorias")
 def prever_por_categoria(
-    dias: int = 30,
+    dias: int = Query(30, ge=1, le=365),
     arquivo_id: Optional[int] = None,
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
