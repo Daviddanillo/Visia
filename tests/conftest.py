@@ -3,8 +3,15 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from app.core.ratelimit import limiter
 from app.db.database import Base, get_db
 from app.main import app
+
+# Desliga o rate limiting na suíte de testes: a fixture auth_headers faz
+# cadastro+login a cada teste, o que estouraria os limites (5/min, 10/min) e
+# retornaria 429 em vez do token. O slowapi consulta esta flag a cada
+# requisição, então desativá-la aqui basta (não testamos o limitador em si).
+limiter.enabled = False
 
 _engine = create_engine(
     "sqlite:///./test.db",
