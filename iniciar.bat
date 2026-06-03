@@ -36,11 +36,26 @@ if not defined PYEXE (
 )
 
 echo.
-echo [1/3] Instalando dependencias...
+echo [1/3] Verificando dependencias...
+
+REM Remove restos de instalacoes interrompidas (pastas ~xxx em site-packages),
+REM que fazem o pip imprimir "Ignoring invalid distribution ~ip" a cada execucao.
+if exist "%VENV_DIR%\Lib\site-packages" (
+    for /d %%D in ("%VENV_DIR%\Lib\site-packages\~*") do rd /s /q "%%D" 2>nul
+)
+
+REM Ja instalado? Pula a etapa de rede (nao acessa o PyPI a cada inicio).
+REM Para forcar a reinstalacao, apague o arquivo .visia_deps_ok
+if exist ".visia_deps_ok" (
+    echo        Dependencias ja instaladas ^(apague .visia_deps_ok para reinstalar^).
+    goto :deps_done
+)
+
 REM IMPORTANTE: usar "python -m pip" (NUNCA o pip.exe), que e bloqueado pelo
 REM Device Guard por ser um executavel gerado/nao assinado.
-"%PYEXE%" -m pip install --upgrade pip %PIP_USER% --quiet
-"%PYEXE%" -m pip install -r requirements.txt %PIP_USER% --quiet
+echo        Baixando pacotes ^(pode levar alguns minutos na primeira vez^)...
+"%PYEXE%" -m pip install --upgrade pip %PIP_USER% --quiet --disable-pip-version-check --no-input --retries 2 --timeout 20
+"%PYEXE%" -m pip install -r requirements.txt %PIP_USER% --quiet --disable-pip-version-check --no-input --retries 3 --timeout 30
 if %errorlevel% neq 0 (
     echo [ERRO] Falha ao instalar dependencias.
     echo        Se aparecer bloqueio do Device Guard, peca ao TI para liberar
@@ -48,6 +63,8 @@ if %errorlevel% neq 0 (
     pause
     exit /b 1
 )
+> ".visia_deps_ok" echo ok
+:deps_done
 
 echo [2/3] Configurando motor de IA...
 "%PYEXE%" _setup_ia.py

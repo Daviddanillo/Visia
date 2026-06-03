@@ -8,97 +8,221 @@
 <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <script src="https://cdn.plot.ly/plotly-2.26.0.min.js" charset="utf-8"></script>
 <style>
-/* ── Variables ── */
+/* ── Variables (tema claro padrão) ── */
 :root {
-  --bg:           #0d0c1a;
-  --surface:      #141328;
-  --surface2:     #1c1b38;
-  --surface3:     #262445;
-  --border:       #2c2a50;
-  --border2:      #3a3860;
-  --accent:       #c8f060;
-  --accent-dim:   rgba(200,240,96,.14);
-  --accent-glow:  rgba(200,240,96,.08);
-  --text:         #f0f0f8;
-  --text-muted:   #6a6888;
-  --text-soft:    #a8a6c8;
-  --danger:       #ff5272;
-  --danger-dim:   rgba(255,82,114,.13);
-  --success:      #27c984;
-  --success-dim:  rgba(39,201,132,.13);
-  --warn:         #ffb84d;
-  --warn-dim:     rgba(255,184,77,.13);
-  --gold:         #ffd060;
-  --gold-dim:     rgba(255,208,96,.13);
-  --cyan:         #4fc3f7;
-  --sidebar:      240px;
-  --radius:       12px;
-  --radius-sm:    8px;
-  --shadow:       0 4px 32px rgba(0,0,0,.6);
+  --bg:           #eef2f7;
+  --bg-soft:      #f8fafc;
+  --surface:      #ffffff;
+  --surface2:     #f5f8fb;
+  --surface3:     #eef2f7;
+  --border:       #e4e9f0;
+  --border2:      #cbd5e1;
+  --accent:       #059669;
+  --accent-dark:  #047857;
+  --accent-dim:   rgba(5,150,105,.10);
+  --accent-glow:  rgba(5,150,105,.06);
+  --on-accent:    #ffffff;
+  --text:         #0f172a;
+  --text-muted:   #64748b;
+  --text-soft:    #475569;
+  --danger:       #dc2626;
+  --danger-dim:   rgba(220,38,38,.10);
+  --success:      #059669;
+  --success-dim:  rgba(5,150,105,.10);
+  --warn:         #d97706;
+  --warn-dim:     rgba(217,119,6,.12);
+  --gold:         #ca8a04;
+  --gold-dim:     rgba(202,138,4,.12);
+  --cyan:         #0891b2;
+  --sidebar:      252px;
+  --radius:       16px;
+  --radius-sm:    11px;
+  --radius-xs:    8px;
+  --shadow:       0 1px 2px rgba(15,23,42,.04), 0 10px 30px rgba(15,23,42,.07);
+  --shadow-sm:    0 1px 2px rgba(15,23,42,.04), 0 2px 8px rgba(15,23,42,.05);
+  --shadow-lg:    0 24px 60px rgba(15,23,42,.16);
+  --ring:         0 0 0 3px var(--accent-dim);
+  --auth-card-bg: rgba(255,255,255,.78);
+  --auth-card-bd: rgba(255,255,255,.85);
+  --auth-blur:    blur(16px) saturate(1.35);
+  --glow1:        rgba(5,150,105,.30);
+  --glow2:        rgba(16,185,129,.22);
+  --glow3:        rgba(8,145,178,.16);
+  --fs:           1;
   --trans:        .18s ease;
 }
 
+/* ── Tema escuro ── */
+:root[data-theme="dark"] {
+  --bg:           #0a0f1c;
+  --bg-soft:      #0e1525;
+  --surface:      #111a2c;
+  --surface2:     #16213a;
+  --surface3:     #1d2a45;
+  --border:       #1f2b45;
+  --border2:      #2c3a5a;
+  --accent:       #10b981;
+  --accent-dark:  #34d399;
+  --accent-dim:   rgba(16,185,129,.16);
+  --accent-glow:  rgba(16,185,129,.10);
+  --on-accent:    #052016;
+  --text:         #e9eef7;
+  --text-muted:   #7a879c;
+  --text-soft:    #aeb9cc;
+  --danger:       #f87171;
+  --danger-dim:   rgba(248,113,113,.16);
+  --success:      #34d399;
+  --success-dim:  rgba(52,211,153,.16);
+  --warn:         #fbbf24;
+  --warn-dim:     rgba(251,191,36,.16);
+  --gold:         #fbbf24;
+  --gold-dim:     rgba(251,191,36,.16);
+  --cyan:         #38bdf8;
+  --shadow:       0 1px 2px rgba(0,0,0,.5), 0 14px 40px rgba(0,0,0,.55);
+  --shadow-sm:    0 1px 3px rgba(0,0,0,.45);
+  --shadow-lg:    0 28px 70px rgba(0,0,0,.6);
+  --auth-card-bg: rgba(17,26,44,.66);
+  --auth-card-bd: rgba(255,255,255,.08);
+  --glow1:        rgba(16,185,129,.34);
+  --glow2:        rgba(16,185,129,.22);
+  --glow3:        rgba(56,189,248,.18);
+}
+
+/* ── Acessibilidade ── */
+:root[data-motion="off"] *,:root[data-motion="off"] *::before,:root[data-motion="off"] *::after{
+  transition:none !important;animation:none !important;scroll-behavior:auto !important
+}
+:root[data-dyslexia="on"] body{
+  font-family:'Verdana','Tahoma','Segoe UI',sans-serif;letter-spacing:.035em;word-spacing:.14em;line-height:1.75
+}
+:root[data-contrast="on"]{
+  --text:#000000;--text-soft:#1e293b;--text-muted:#334155;
+  --border:#94a3b8;--border2:#475569;--bg:#ffffff
+}
+:root[data-theme="dark"][data-contrast="on"]{
+  --text:#ffffff;--text-soft:#e2e8f0;--text-muted:#cbd5e1;
+  --border:#64748b;--border2:#94a3b8;--bg:#000000;--surface:#0b1220
+}
+:root[data-contrast="on"] .card,
+:root[data-contrast="on"] .stat-card,
+:root[data-contrast="on"] .auth-card,
+:root[data-contrast="on"] .form-group input,
+:root[data-contrast="on"] .form-group select,
+:root[data-contrast="on"] .field input{border-width:1.5px}
+
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{font-size:15px}
+html{font-size:calc(15px * var(--fs,1))}
 body{font-family:'Urbanist',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 a{text-decoration:none;color:inherit}
 button{cursor:pointer;font-family:inherit;border:none;outline:none}
 input,select,textarea{font-family:inherit;outline:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
-::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar{width:9px;height:9px}
 ::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px;border:2px solid var(--bg)}
 
 /* ═══════════════════════════════════════
    AUTH SCREEN
 ═══════════════════════════════════════ */
 #auth-screen{
-  min-height:100vh;display:flex;align-items:center;justify-content:center;
-  background:radial-gradient(ellipse 900px 700px at 65% 35%, rgba(200,240,96,.06) 0%, transparent 65%),
-             radial-gradient(ellipse 700px 500px at 10% 80%, rgba(79,195,247,.05) 0%, transparent 65%),
-             radial-gradient(ellipse 500px 400px at 90% 90%, rgba(255,140,66,.04) 0%, transparent 65%),
-             var(--bg);
+  min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;
+  background:
+    radial-gradient(ellipse 700px 520px at 78% 18%, var(--glow1) 0%, transparent 58%),
+    radial-gradient(ellipse 560px 460px at 14% 88%, var(--glow3) 0%, transparent 60%),
+    linear-gradient(160deg, var(--bg-soft) 0%, var(--bg) 100%);
 }
-.auth-wrap{width:100%;max-width:420px;padding:24px}
-.auth-brand{text-align:center;margin-bottom:36px}
+/* brilho desfocado atrás do card, na cor do tema, para dar foco à caixa */
+#auth-screen::before{
+  content:'';position:absolute;width:560px;height:560px;border-radius:50%;
+  top:50%;left:50%;transform:translate(-50%,-54%);
+  background:radial-gradient(circle, var(--glow1) 0%, var(--glow2) 38%, transparent 70%);
+  filter:blur(80px);opacity:.9;pointer-events:none;z-index:0
+}
+.auth-wrap{width:100%;max-width:440px;padding:24px;position:relative;z-index:1}
+.auth-brand{text-align:center;margin-bottom:28px}
 .auth-logo-ring{
-  width:64px;height:64px;border-radius:18px;
-  background:linear-gradient(135deg,var(--accent),#90e030);
+  width:64px;height:64px;border-radius:20px;
+  background:linear-gradient(135deg,var(--accent),#10b981);
   display:flex;align-items:center;justify-content:center;
-  font-size:28px;font-weight:800;color:#0c0c0c;
-  margin:0 auto 14px;box-shadow:0 0 32px rgba(200,240,96,.25)
+  font-size:28px;font-weight:800;color:#fff;
+  margin:0 auto 16px;box-shadow:0 12px 30px var(--glow1), inset 0 1px 0 rgba(255,255,255,.3)
 }
-.auth-brand h1{font-size:1.8rem;font-weight:800;letter-spacing:-.5px}
+.auth-brand h1{font-size:1.8rem;font-weight:800;letter-spacing:-.6px}
 .auth-brand p{color:var(--text-muted);font-size:.9rem;margin-top:4px}
 .auth-card{
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:var(--radius);padding:32px;box-shadow:var(--shadow)
+  background:var(--auth-card-bg);
+  -webkit-backdrop-filter:var(--auth-blur);backdrop-filter:var(--auth-blur);
+  border:1px solid var(--auth-card-bd);
+  border-radius:22px;padding:32px;
+  box-shadow:var(--shadow-lg), inset 0 1px 0 rgba(255,255,255,.22)
 }
-.auth-card h2{font-size:1.15rem;font-weight:700;margin-bottom:22px}
+.auth-card h2{font-size:1.25rem;font-weight:800;margin-bottom:4px;letter-spacing:-.3px}
+.auth-card .auth-sub{font-size:.85rem;color:var(--text-muted);margin-bottom:22px}
 .field{margin-bottom:16px}
-.field label{display:block;font-size:.82rem;font-weight:600;color:var(--text-soft);margin-bottom:6px;letter-spacing:.3px;text-transform:uppercase}
+.field label{display:block;font-size:.8rem;font-weight:600;color:var(--text-soft);margin-bottom:7px;letter-spacing:.2px}
 .field input{
-  width:100%;padding:11px 14px;background:var(--surface2);
-  border:1px solid var(--border2);border-radius:var(--radius-sm);
-  color:var(--text);font-size:.95rem;transition:border var(--trans)
+  width:100%;padding:12px 14px;background:var(--surface2);
+  border:1px solid var(--border);border-radius:var(--radius-sm);
+  color:var(--text);font-size:.95rem;transition:border var(--trans),box-shadow var(--trans),background var(--trans)
 }
-.field input:focus{border-color:var(--accent)}
+.field input::placeholder{color:var(--text-muted)}
+.field input:focus{border-color:var(--accent);box-shadow:var(--ring);background:var(--surface)}
 .btn-primary{
-  width:100%;padding:13px;background:var(--accent);color:#0c0c0c;
+  width:100%;padding:13px;background:var(--accent);color:var(--on-accent);
   font-weight:700;font-size:.95rem;border-radius:var(--radius-sm);
-  transition:opacity var(--trans),transform var(--trans)
+  transition:background var(--trans),transform var(--trans),box-shadow var(--trans);
+  box-shadow:0 1px 2px rgba(5,150,105,.25)
 }
-.btn-primary:hover{opacity:.88;transform:translateY(-1px)}
+.btn-primary:hover{background:var(--accent-dark);transform:translateY(-1px);box-shadow:0 4px 14px rgba(5,150,105,.28)}
 .btn-primary:active{transform:translateY(0)}
+.btn-primary:disabled{opacity:.6;cursor:not-allowed;transform:none}
 .auth-toggle{text-align:center;margin-top:18px;font-size:.88rem;color:var(--text-muted)}
 .auth-toggle span{color:var(--accent);cursor:pointer;font-weight:600}
 .auth-toggle span:hover{text-decoration:underline}
 .auth-alert{
   padding:11px 14px;border-radius:var(--radius-sm);margin-top:14px;
-  font-size:.88rem;font-weight:500;display:none
+  font-size:.88rem;font-weight:500;display:none;line-height:1.5
 }
 .auth-alert.error{background:var(--danger-dim);border:1px solid var(--danger);color:var(--danger)}
 .auth-alert.success{background:var(--success-dim);border:1px solid var(--success);color:var(--success)}
+
+/* mostrar/ocultar senha */
+.pwd-wrap{position:relative}
+.pwd-wrap input{padding-right:44px;width:100%}
+.pwd-eye{
+  position:absolute;right:5px;top:50%;transform:translateY(-50%);
+  width:34px;height:34px;border-radius:7px;background:transparent;color:var(--text-muted);
+  display:flex;align-items:center;justify-content:center;transition:background var(--trans),color var(--trans)
+}
+.pwd-eye:hover{background:var(--surface3);color:var(--text-soft)}
+.pwd-eye svg{width:18px;height:18px}
+/* medidor de força */
+.pwd-strength{display:none;margin-top:8px}
+.pwd-strength.show{display:block}
+.pwd-bars{display:flex;gap:5px}
+.pwd-bar{flex:1;height:5px;border-radius:99px;background:var(--surface3);transition:background var(--trans)}
+.pwd-strength-txt{font-size:.74rem;color:var(--text-muted);margin-top:5px;font-weight:600}
+.auth-forgot{display:block;text-align:right;margin:-6px 0 14px;font-size:.82rem;color:var(--accent);font-weight:600;cursor:pointer}
+.auth-forgot:hover{text-decoration:underline}
+.auth-secure{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:18px;font-size:.74rem;color:var(--text-muted)}
+.auth-secure svg{width:13px;height:13px}
+
+/* ── Modal genérico ── */
+.modal-overlay{
+  position:fixed;inset:0;z-index:9000;display:none;align-items:center;justify-content:center;
+  background:rgba(15,23,42,.45);backdrop-filter:blur(2px);padding:20px
+}
+.modal-overlay.show{display:flex;animation:fadeIn .18s ease}
+.modal{
+  width:100%;max-width:420px;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:26px;box-shadow:0 24px 60px rgba(15,23,42,.25)
+}
+.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.modal-head h3{font-size:1.12rem;font-weight:700}
+.modal-x{width:30px;height:30px;border-radius:7px;background:transparent;color:var(--text-muted);font-size:1.1rem;display:flex;align-items:center;justify-content:center}
+.modal-x:hover{background:var(--surface3);color:var(--text)}
+.modal-sub{font-size:.86rem;color:var(--text-muted);line-height:1.55;margin-bottom:18px}
 
 /* ═══════════════════════════════════════
    APP LAYOUT
@@ -110,8 +234,8 @@ input,select,textarea{font-family:inherit;outline:none}
   width:var(--sidebar);min-height:100vh;
   background:linear-gradient(180deg,var(--surface) 0%,var(--surface2) 100%);
   border-right:1px solid var(--border);
-  display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:100;
-  box-shadow:4px 0 24px rgba(0,0,0,.4)
+  display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:200;
+  box-shadow:1px 0 0 var(--border)
 }
 .sb-brand{
   display:flex;align-items:center;gap:11px;
@@ -119,9 +243,10 @@ input,select,textarea{font-family:inherit;outline:none}
 }
 .sb-logo{
   width:36px;height:36px;border-radius:10px;
-  background:linear-gradient(135deg,var(--accent),#90e030);
+  background:linear-gradient(135deg,var(--accent),#10b981);
   display:flex;align-items:center;justify-content:center;
-  font-size:16px;font-weight:800;color:#0c0c0c;flex-shrink:0
+  font-size:16px;font-weight:800;color:#fff;flex-shrink:0;
+  box-shadow:0 4px 12px rgba(5,150,105,.28)
 }
 .sb-brand-name{font-size:1.05rem;font-weight:800;letter-spacing:-.3px}
 .sb-brand-sub{font-size:.72rem;color:var(--text-muted);margin-top:1px}
@@ -134,7 +259,7 @@ input,select,textarea{font-family:inherit;outline:none}
   cursor:pointer;transition:background var(--trans),color var(--trans);user-select:none
 }
 .nav-item:hover{background:var(--surface2);color:var(--text)}
-.nav-item.active{background:var(--accent-dim);color:var(--accent);font-weight:700;box-shadow:0 0 12px rgba(200,240,96,.08)}
+.nav-item.active{background:var(--accent-dim);color:var(--accent);font-weight:700}
 .nav-item svg{width:18px;height:18px;flex-shrink:0;opacity:.8}
 .nav-item.active svg{opacity:1}
 
@@ -144,9 +269,9 @@ input,select,textarea{font-family:inherit;outline:none}
 }
 .user-avatar{
   width:34px;height:34px;border-radius:50%;
-  background:linear-gradient(135deg,var(--accent),#90e030);
+  background:linear-gradient(135deg,var(--accent),#10b981);
   display:flex;align-items:center;justify-content:center;
-  font-size:13px;font-weight:700;color:#0c0c0c;flex-shrink:0
+  font-size:13px;font-weight:700;color:#fff;flex-shrink:0
 }
 .user-info{flex:1;min-width:0}
 .user-info .u-name{font-size:.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -173,7 +298,8 @@ input,select,textarea{font-family:inherit;outline:none}
 /* ═══════════════════════════════════════
    SHARED COMPONENTS
 ═══════════════════════════════════════ */
-.card{background:linear-gradient(145deg,var(--surface) 0%,var(--surface2) 100%);border:1px solid var(--border);border-radius:var(--radius);padding:24px;box-shadow:0 2px 16px rgba(0,0,0,.3)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:26px;box-shadow:var(--shadow-sm);transition:box-shadow var(--trans),border-color var(--trans)}
+.card:hover{box-shadow:var(--shadow)}
 .card-title{font-size:.95rem;font-weight:700;margin-bottom:18px;display:flex;align-items:center;gap:8px}
 .card-title svg{width:18px;height:18px;color:var(--accent);opacity:.8}
 
@@ -181,8 +307,8 @@ input,select,textarea{font-family:inherit;outline:none}
   padding:10px 18px;border-radius:var(--radius-sm);font-weight:600;
   font-size:.88rem;transition:all var(--trans);display:inline-flex;align-items:center;gap:7px
 }
-.btn-accent{background:var(--accent);color:#0c0c0c}
-.btn-accent:hover{opacity:.85;transform:translateY(-1px)}
+.btn-accent{background:var(--accent);color:var(--on-accent);box-shadow:0 1px 2px rgba(5,150,105,.25)}
+.btn-accent:hover{background:var(--accent-dark);transform:translateY(-1px);box-shadow:0 4px 12px rgba(5,150,105,.25)}
 .btn-ghost{background:transparent;color:var(--text-soft);border:1px solid var(--border2)}
 .btn-ghost:hover{background:var(--surface2);color:var(--text);border-color:var(--border2)}
 .btn-danger{background:var(--danger-dim);color:var(--danger);border:1px solid rgba(255,82,82,.2)}
@@ -194,12 +320,12 @@ input,select,textarea{font-family:inherit;outline:none}
 .form-group{margin-bottom:14px}
 .form-group label{display:block;font-size:.8rem;font-weight:600;color:var(--text-soft);margin-bottom:6px;text-transform:uppercase;letter-spacing:.3px}
 .form-group input,.form-group select{
-  width:100%;padding:10px 13px;background:var(--surface2);
-  border:1px solid var(--border2);border-radius:var(--radius-sm);
-  color:var(--text);font-size:.9rem;transition:border var(--trans)
+  width:100%;padding:11px 13px;background:var(--surface2);
+  border:1px solid var(--border);border-radius:var(--radius-sm);
+  color:var(--text);font-size:.9rem;transition:border var(--trans),box-shadow var(--trans),background var(--trans)
 }
-.form-group input:focus,.form-group select:focus{border-color:var(--accent)}
-.form-group select option{background:var(--surface2);color:var(--text)}
+.form-group input:focus,.form-group select:focus{border-color:var(--accent);box-shadow:var(--ring);background:var(--surface)}
+.form-group select option{background:var(--surface);color:var(--text)}
 
 .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:99px;font-size:.75rem;font-weight:600}
 .badge-success{background:var(--success-dim);color:var(--success)}
@@ -227,9 +353,10 @@ input,select,textarea{font-family:inherit;outline:none}
   box-shadow:var(--shadow);animation:slideIn .25s ease;max-width:320px;
   display:flex;align-items:center;gap:9px;transition:opacity .3s
 }
-.toast-success{background:#1a3a2a;border:1px solid var(--success);color:var(--success)}
-.toast-error{background:#2a1a1a;border:1px solid var(--danger);color:var(--danger)}
-.toast-info{background:#1a2a3a;border:1px solid var(--cyan);color:var(--cyan)}
+.toast{background:var(--surface);border:1px solid var(--border)}
+.toast-success{border-left:4px solid var(--success);color:var(--text)}
+.toast-error{border-left:4px solid var(--danger);color:var(--text)}
+.toast-info{border-left:4px solid var(--cyan);color:var(--text)}
 @keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
 
 .spinner{
@@ -251,7 +378,7 @@ input,select,textarea{font-family:inherit;outline:none}
   padding:24px 22px;position:relative;overflow:hidden;
   transition:border-color var(--trans),transform var(--trans),box-shadow var(--trans)
 }
-.stat-card:hover{border-color:var(--card-color,var(--accent));transform:translateY(-3px);box-shadow:0 8px 32px rgba(0,0,0,.4),0 0 0 1px var(--card-color,var(--accent)) inset}
+.stat-card:hover{border-color:var(--card-color,var(--accent));transform:translateY(-3px);box-shadow:0 10px 28px rgba(15,23,42,.10),0 0 0 1px var(--card-color,var(--accent)) inset}
 .stat-card::before{
   content:'';position:absolute;top:0;left:0;right:0;height:3px;
   background:linear-gradient(90deg,var(--card-color,var(--accent)),transparent 80%)
@@ -424,7 +551,7 @@ input,select,textarea{font-family:inherit;outline:none}
 .tab-btn:hover{color:var(--text);background:var(--surface3)}
 .tab-btn.active{
   background:var(--surface3);color:var(--accent);
-  box-shadow:0 2px 8px rgba(0,0,0,.4),0 0 0 1px rgba(200,240,96,.2);
+  box-shadow:var(--shadow-sm),0 0 0 1px var(--accent-dim);
   border-bottom:2px solid var(--accent)
 }
 
@@ -439,7 +566,7 @@ input,select,textarea{font-family:inherit;outline:none}
   color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;
   border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface)
 }
-.forecast-table td{padding:9px 12px;border-bottom:1px solid rgba(46,46,46,.5);vertical-align:middle}
+.forecast-table td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
 .forecast-table tr.row-holiday td{background:rgba(255,208,96,.04)}
 .forecast-table tr.row-queda td{background:rgba(255,82,82,.04)}
 .forecast-table tr.row-alta td{background:rgba(76,218,138,.04)}
@@ -535,14 +662,179 @@ input,select,textarea{font-family:inherit;outline:none}
 .insight-row.down .insight-pct{color:var(--danger)}
 .insight-date{font-size:.78rem;color:var(--text-soft);font-weight:600;white-space:nowrap;flex-shrink:0;text-align:right}
 @media (max-width:900px){.cat-cards,.cat-highlight-grid{grid-template-columns:1fr}}
+
+/* ═══════════════════════════════════════
+   TOOLBAR / SEGMENTED (tipo de gráfico)
+═══════════════════════════════════════ */
+.chart-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.ct-label{font-size:.74rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px}
+.seg{display:inline-flex;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:3px;gap:2px}
+.seg-btn{
+  padding:7px 14px;border-radius:7px;font-size:.82rem;font-weight:600;color:var(--text-muted);
+  background:transparent;transition:all var(--trans);display:inline-flex;align-items:center;gap:6px;white-space:nowrap
+}
+.seg-btn:hover{color:var(--text)}
+.seg-btn.active{background:var(--surface);color:var(--accent);box-shadow:var(--shadow-sm);font-weight:700}
+.seg-btn svg{width:15px;height:15px}
+
+/* ═══════════════════════════════════════
+   TOPBAR MOBILE + OVERLAY
+═══════════════════════════════════════ */
+#mobile-topbar{
+  display:none;position:fixed;top:0;left:0;right:0;height:56px;z-index:120;
+  background:var(--surface);border-bottom:1px solid var(--border);
+  align-items:center;gap:12px;padding:0 16px;box-shadow:var(--shadow-sm)
+}
+.mt-burger{width:38px;height:38px;border-radius:9px;background:var(--surface2);border:1px solid var(--border);color:var(--text-soft);display:flex;align-items:center;justify-content:center}
+.mt-burger svg{width:20px;height:20px}
+.mt-brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:1.05rem}
+.mt-logo{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--accent),#10b981);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px}
+#sidebar-overlay{display:none;position:fixed;inset:0;z-index:110;background:rgba(15,23,42,.4);backdrop-filter:blur(1px)}
+#sidebar-overlay.show{display:block}
+.mt-theme{margin-left:auto}
+.mt-theme .tt-ico{display:flex}
+.tt-ico svg{width:18px;height:18px;display:block}
+
+/* ── Alternância de tema ── */
+.theme-toggle{
+  display:inline-flex;align-items:center;gap:8px;border-radius:99px;
+  background:var(--surface2);border:1px solid var(--border);color:var(--text-soft);
+  font-weight:600;font-size:.82rem;padding:8px 14px;transition:all var(--trans)
+}
+.theme-toggle:hover{border-color:var(--accent);color:var(--accent)}
+.theme-toggle .tt-ico{display:inline-flex;color:var(--accent)}
+.theme-toggle-corner{position:absolute;top:22px;right:24px;z-index:2;backdrop-filter:blur(8px);background:var(--auth-card-bg)}
+.sb-theme{margin:0 12px 8px;justify-content:center;width:calc(100% - 24px)}
+
+/* ═══════════════════════════════════════
+   PAINEL DE ACESSIBILIDADE
+═══════════════════════════════════════ */
+.a11y-fab{
+  position:fixed;right:20px;bottom:20px;z-index:8500;
+  width:52px;height:52px;border-radius:50%;background:var(--accent);color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 8px 24px rgba(5,150,105,.35);transition:transform var(--trans),background var(--trans)
+}
+.a11y-fab:hover{background:var(--accent-dark);transform:translateY(-2px)}
+.a11y-fab svg{width:26px;height:26px}
+.a11y-panel{
+  position:fixed;right:20px;bottom:84px;z-index:8600;width:320px;max-width:calc(100vw - 32px);
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  box-shadow:0 24px 60px rgba(15,23,42,.22);padding:20px;display:none
+}
+.a11y-panel.show{display:block;animation:fadeIn .18s ease}
+.a11y-panel h3{font-size:1rem;font-weight:800;display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.a11y-panel h3 svg{width:18px;height:18px;color:var(--accent)}
+.a11y-panel .a11y-intro{font-size:.78rem;color:var(--text-muted);margin-bottom:16px;line-height:1.5}
+.a11y-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-top:1px solid var(--border)}
+.a11y-row:first-of-type{border-top:none}
+.a11y-row .a11y-name{font-size:.86rem;font-weight:600}
+.a11y-row .a11y-desc{font-size:.72rem;color:var(--text-muted);margin-top:1px}
+.a11y-fs{display:flex;align-items:center;gap:6px}
+.a11y-fs button{width:30px;height:30px;border-radius:7px;background:var(--surface2);border:1px solid var(--border);color:var(--text-soft);font-weight:700;font-size:.9rem;display:flex;align-items:center;justify-content:center}
+.a11y-fs button:hover{border-color:var(--accent);color:var(--accent)}
+.a11y-fs .a11y-fs-val{min-width:42px;text-align:center;font-size:.78rem;font-weight:700;color:var(--text-soft)}
+/* switch */
+.switch{position:relative;display:inline-block;width:42px;height:24px;flex-shrink:0}
+.switch input{opacity:0;width:0;height:0}
+.switch .slider{position:absolute;inset:0;background:var(--border2);border-radius:99px;transition:background var(--trans);cursor:pointer}
+.switch .slider::before{content:'';position:absolute;height:18px;width:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform var(--trans);box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.switch input:checked + .slider{background:var(--accent)}
+.switch input:checked + .slider::before{transform:translateX(18px)}
+.a11y-reset{width:100%;margin-top:14px;padding:9px;border-radius:var(--radius-sm);background:var(--surface2);border:1px solid var(--border);color:var(--text-soft);font-weight:600;font-size:.82rem}
+.a11y-reset:hover{border-color:var(--border2);color:var(--text)}
+@media print{.a11y-fab,.a11y-panel,#mobile-topbar{display:none !important}}
+
+/* ═══════════════════════════════════════
+   RESPONSIVIDADE
+═══════════════════════════════════════ */
+@media (max-width:860px){
+  #mobile-topbar{display:flex}
+  #sidebar{transform:translateX(-100%);transition:transform .25s ease}
+  #sidebar.open{transform:none;box-shadow:8px 0 32px rgba(15,23,42,.18)}
+  #main-content{margin-left:0;padding-top:56px}
+  .page{padding:22px 16px}
+  .page-header h1{font-size:1.35rem}
+  .stats-grid,.prev-stats,.cat-highlight-grid{grid-template-columns:repeat(2,1fr)}
+  .dash-grid,.dados-grid,.cat-cards{grid-template-columns:1fr}
+  .tabs-header{overflow-x:auto;flex-wrap:nowrap}
+  .tab-btn{flex:0 0 auto}
+  .prev-controls .form-group{min-width:0;flex:1 1 100%}
+  .a11y-fab{bottom:16px;right:16px}
+}
+@media (max-width:520px){
+  .stats-grid,.prev-stats,.cat-highlight-grid{grid-template-columns:1fr}
+  #chart-principal{height:420px}
+  .prev-controls .btn{width:100%;justify-content:center}
+}
 </style>
 </head>
 <body>
 
 <div id="toast-container"></div>
 
+<!-- Botão + painel de acessibilidade (global) -->
+<button class="a11y-fab" id="a11y-fab" onclick="toggleA11yPanel()" aria-label="Opções de acessibilidade" title="Acessibilidade">
+  <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="4" r="2"/><path d="M19 8l-7 1-7-1"/><path d="M12 9v6m0 0l-3 5m3-5l3 5"/></svg>
+</button>
+<div class="a11y-panel" id="a11y-panel" role="dialog" aria-label="Acessibilidade">
+  <h3><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="4" r="2"/><path d="M19 8l-7 1-7-1"/><path d="M12 9v6m0 0l-3 5m3-5l3 5"/></svg>Acessibilidade</h3>
+  <p class="a11y-intro">Ajuste a experiência às suas necessidades. As preferências ficam salvas neste navegador.</p>
+
+  <div class="a11y-row">
+    <div><div class="a11y-name">Tamanho do texto</div><div class="a11y-desc">Aumente ou reduza a fonte</div></div>
+    <div class="a11y-fs">
+      <button onclick="ajustarFonte(-0.1)" aria-label="Diminuir texto">A−</button>
+      <span class="a11y-fs-val" id="a11y-fs-val">100%</span>
+      <button onclick="ajustarFonte(0.1)" aria-label="Aumentar texto" style="font-size:1.05rem">A+</button>
+    </div>
+  </div>
+
+  <div class="a11y-row">
+    <div><div class="a11y-name">Alto contraste</div><div class="a11y-desc">Texto e bordas mais marcados</div></div>
+    <label class="switch"><input type="checkbox" id="a11y-contrast" onchange="setA11y('contrast',this.checked)"><span class="slider"></span></label>
+  </div>
+
+  <div class="a11y-row">
+    <div><div class="a11y-name">Leitura facilitada</div><div class="a11y-desc">Fonte e espaçamento p/ dislexia</div></div>
+    <label class="switch"><input type="checkbox" id="a11y-dyslexia" onchange="setA11y('dyslexia',this.checked)"><span class="slider"></span></label>
+  </div>
+
+  <div class="a11y-row">
+    <div><div class="a11y-name">Modo daltônico</div><div class="a11y-desc">Paleta segura p/ daltonismo</div></div>
+    <label class="switch"><input type="checkbox" id="a11y-cb" onchange="setA11y('cb',this.checked)"><span class="slider"></span></label>
+  </div>
+
+  <div class="a11y-row">
+    <div><div class="a11y-name">Reduzir animações</div><div class="a11y-desc">Desliga transições e efeitos</div></div>
+    <label class="switch"><input type="checkbox" id="a11y-motion" onchange="setA11y('motionOff',this.checked)"><span class="slider"></span></label>
+  </div>
+
+  <button class="a11y-reset" onclick="resetarA11y()">Restaurar padrões</button>
+</div>
+
+<!-- Modal: recuperar senha -->
+<div class="modal-overlay" id="modal-recuperar" onclick="if(event.target===this)fecharRecuperar()">
+  <div class="modal" role="dialog" aria-label="Recuperar senha">
+    <div class="modal-head">
+      <h3>Recuperar senha</h3>
+      <button class="modal-x" onclick="fecharRecuperar()" aria-label="Fechar">✕</button>
+    </div>
+    <p class="modal-sub">Informe o e-mail da sua conta. Enviaremos instruções para redefinir sua senha.</p>
+    <div class="field">
+      <label>E-mail</label>
+      <input type="email" id="rec-email" placeholder="email@exemplo.com" onkeydown="if(event.key==='Enter')enviarRecuperacao()"/>
+    </div>
+    <div class="auth-alert" id="rec-alert"></div>
+    <button class="btn-primary" style="margin-top:6px" onclick="enviarRecuperacao()">Enviar instruções</button>
+  </div>
+</div>
+
 <!-- ═══════════════ AUTH ═══════════════ -->
 <div id="auth-screen">
+  <button class="theme-toggle theme-toggle-corner" onclick="toggleTema()" aria-label="Alternar tema claro/escuro" title="Alternar tema">
+    <span class="tt-ico" id="tt-ico-auth"></span><span class="tt-txt" id="tt-txt-auth">Escuro</span>
+  </button>
   <div class="auth-wrap">
     <div class="auth-brand">
       <div class="auth-logo-ring">V</div>
@@ -551,23 +843,47 @@ input,select,textarea{font-family:inherit;outline:none}
     </div>
     <div class="auth-card">
       <h2 id="auth-title">Entrar na conta</h2>
+      <p class="auth-sub" id="auth-sub">Acesse o painel da sua empresa.</p>
       <div class="field" id="field-nome" style="display:none">
         <label>Nome completo</label>
-        <input type="text" id="inp-nome" placeholder="Seu nome"/>
+        <input type="text" id="inp-nome" placeholder="Seu nome" autocomplete="name"/>
       </div>
       <div class="field">
         <label>E-mail</label>
-        <input type="email" id="inp-email" placeholder="email@exemplo.com"/>
+        <input type="email" id="inp-email" placeholder="email@exemplo.com" autocomplete="email"/>
       </div>
       <div class="field">
         <label>Senha</label>
-        <input type="password" id="inp-senha" placeholder="••••••••" onkeydown="if(event.key==='Enter')authSubmit()"/>
+        <div class="pwd-wrap">
+          <input type="password" id="inp-senha" placeholder="••••••••" autocomplete="current-password" oninput="atualizarForcaSenha()" onkeydown="if(event.key==='Enter')authSubmit()"/>
+          <button type="button" class="pwd-eye" onclick="toggleSenha('inp-senha',this)" aria-label="Mostrar senha" title="Mostrar/ocultar senha">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+        <div class="pwd-strength" id="pwd-strength">
+          <div class="pwd-bars"><div class="pwd-bar"></div><div class="pwd-bar"></div><div class="pwd-bar"></div><div class="pwd-bar"></div></div>
+          <div class="pwd-strength-txt" id="pwd-strength-txt"></div>
+        </div>
       </div>
+      <div class="field" id="field-confirma" style="display:none">
+        <label>Confirmar senha</label>
+        <div class="pwd-wrap">
+          <input type="password" id="inp-confirma" placeholder="••••••••" autocomplete="new-password" onkeydown="if(event.key==='Enter')authSubmit()"/>
+          <button type="button" class="pwd-eye" onclick="toggleSenha('inp-confirma',this)" aria-label="Mostrar senha" title="Mostrar/ocultar senha">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+      <span class="auth-forgot" id="auth-forgot" onclick="abrirRecuperar()">Esqueci minha senha</span>
       <button class="btn-primary" onclick="authSubmit()" id="btn-auth">Entrar</button>
       <div class="auth-alert" id="auth-alert"></div>
       <div class="auth-toggle">
         <span id="auth-toggle-text">Não tem conta?</span>
         <span onclick="toggleAuthMode()" id="auth-toggle-link"> Criar conta</span>
+      </div>
+      <div class="auth-secure">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        Conexão segura · seus dados são protegidos
       </div>
     </div>
   </div>
@@ -575,6 +891,16 @@ input,select,textarea{font-family:inherit;outline:none}
 
 <!-- ═══════════════ APP ═══════════════ -->
 <div id="app-screen">
+  <div id="mobile-topbar">
+    <button class="mt-burger" onclick="toggleSidebar()" aria-label="Abrir menu">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="mt-brand"><span class="mt-logo">V</span> Visia</div>
+    <button class="mt-burger mt-theme" onclick="toggleTema()" aria-label="Alternar tema" title="Alternar tema">
+      <span class="tt-ico" id="tt-ico-mt"></span>
+    </button>
+  </div>
+  <div id="sidebar-overlay" onclick="toggleSidebar(false)"></div>
   <div class="app-layout">
 
     <nav id="sidebar">
@@ -600,6 +926,10 @@ input,select,textarea{font-family:inherit;outline:none}
           Previsão IA
         </div>
       </div>
+      <button class="theme-toggle sb-theme" onclick="toggleTema()" aria-label="Alternar tema claro/escuro" title="Alternar tema">
+        <span class="tt-ico" id="tt-ico-sb"></span>
+        <span class="tt-txt" id="tt-txt-sb">Modo escuro</span>
+      </button>
       <div class="sb-user">
         <div class="user-avatar" id="sb-avatar">U</div>
         <div class="user-info">
@@ -883,7 +1213,22 @@ input,select,textarea{font-family:inherit;outline:none}
               <button class="tab-btn" onclick="switchTab('tabela',this)">📋 Tabela</button>
               <button class="tab-btn" onclick="switchTab('acuracia',this)">📊 Acurácia</button>
             </div>
-            <div id="tab-principal" class="tab-pane active"><div id="chart-principal" class="chart-wrap"></div></div>
+            <div id="tab-principal" class="tab-pane active">
+              <div class="chart-toolbar">
+                <span class="ct-label">Tipo de gráfico</span>
+                <div class="seg" id="seg-principal">
+                  <button class="seg-btn active" data-tipo="area" onclick="setChartTipo('area',this)">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 17l5-6 4 3 5-7 4 4v6H3z"/></svg>Área</button>
+                  <button class="seg-btn" data-tipo="linha" onclick="setChartTipo('linha',this)">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 17 9 11 13 14 21 6"/></svg>Linha</button>
+                  <button class="seg-btn" data-tipo="barras" onclick="setChartTipo('barras',this)">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="4" y="11" width="4" height="9"/><rect x="10" y="6" width="4" height="14"/><rect x="16" y="13" width="4" height="7"/></svg>Barras</button>
+                  <button class="seg-btn" data-tipo="pontos" onclick="setChartTipo('pontos',this)">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="6" cy="15" r="2"/><circle cx="12" cy="9" r="2"/><circle cx="18" cy="13" r="2"/></svg>Pontos</button>
+                </div>
+              </div>
+              <div id="chart-principal" class="chart-wrap"></div>
+            </div>
             <div id="tab-categorias" class="tab-pane">
               <div id="categorias-content"></div>
             </div>
@@ -938,10 +1283,12 @@ input,select,textarea{font-family:inherit;outline:none}
 
 <script>
 /* ── Estado global ── */
-let state = { usuario: null, token: null, dadosPrevisao: null, chartsRendered: new Set() };
+let state = { usuario: null, token: null, dadosPrevisao: null, chartsRendered: new Set(), chartTipoPrincipal: 'area' };
 
 /* ── Init ── */
 document.addEventListener('DOMContentLoaded', () => {
+  carregarTema();
+  carregarA11y();
   const saved = localStorage.getItem('visia_session');
   if (saved) {
     try {
@@ -953,6 +1300,176 @@ document.addEventListener('DOMContentLoaded', () => {
   const inp = document.getElementById('inp-data-venda');
   if (inp) inp.value = new Date().toISOString().split('T')[0];
 });
+
+/* ── Tema claro/escuro ── */
+const ICO_SOL = '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><path d="M12 1.5v2M12 20.5v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1.5 12h2M20.5 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>';
+const ICO_LUA = '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>';
+let temaAtual = 'light';
+function carregarTema() {
+  temaAtual = localStorage.getItem('visia_theme') || 'light';
+  aplicarTema();
+}
+function aplicarTema() {
+  document.documentElement.dataset.theme = temaAtual;
+  LB = buildLB();
+  const escuro = temaAtual === 'dark';
+  const ico = escuro ? ICO_SOL : ICO_LUA;
+  ['tt-ico-auth', 'tt-ico-sb', 'tt-ico-mt'].forEach(id => { const e = document.getElementById(id); if (e) e.innerHTML = ico; });
+  const txt = escuro ? 'Claro' : 'Escuro';
+  const ea = document.getElementById('tt-txt-auth'); if (ea) ea.textContent = txt;
+  const es = document.getElementById('tt-txt-sb');   if (es) es.textContent = escuro ? 'Modo claro' : 'Modo escuro';
+}
+function toggleTema() {
+  temaAtual = (temaAtual === 'dark') ? 'light' : 'dark';
+  localStorage.setItem('visia_theme', temaAtual);
+  aplicarTema();
+  refreshChartsTheme();
+}
+
+/* ── Acessibilidade ── */
+const A11Y_DEFAULT = { fs: 1, contrast: false, dyslexia: false, cb: false, motionOff: false };
+let a11y = { ...A11Y_DEFAULT };
+
+function carregarA11y() {
+  try {
+    const s = JSON.parse(localStorage.getItem('visia_a11y'));
+    if (s) a11y = { ...A11Y_DEFAULT, ...s };
+  } catch (_) {}
+  aplicarA11y();
+}
+function aplicarA11y() {
+  const r = document.documentElement;
+  r.style.setProperty('--fs', a11y.fs);
+  r.dataset.contrast = a11y.contrast ? 'on' : 'off';
+  r.dataset.dyslexia = a11y.dyslexia ? 'on' : 'off';
+  r.dataset.cb       = a11y.cb ? 'on' : 'off';
+  r.dataset.motion   = a11y.motionOff ? 'off' : 'on';
+  // sincroniza controles
+  const fsVal = document.getElementById('a11y-fs-val');
+  if (fsVal) fsVal.textContent = Math.round(a11y.fs * 100) + '%';
+  const map = { 'a11y-contrast': 'contrast', 'a11y-dyslexia': 'dyslexia', 'a11y-cb': 'cb', 'a11y-motion': 'motionOff' };
+  for (const [id, key] of Object.entries(map)) { const el = document.getElementById(id); if (el) el.checked = !!a11y[key]; }
+}
+function salvarA11y() { localStorage.setItem('visia_a11y', JSON.stringify(a11y)); }
+function setA11y(key, val) {
+  a11y[key] = val; aplicarA11y(); salvarA11y();
+  if (key === 'cb' || key === 'contrast') refreshChartsTheme();
+}
+function ajustarFonte(delta) {
+  a11y.fs = Math.min(1.4, Math.max(0.85, Math.round((a11y.fs + delta) * 100) / 100));
+  aplicarA11y(); salvarA11y();
+}
+function resetarA11y() { a11y = { ...A11Y_DEFAULT }; aplicarA11y(); salvarA11y(); refreshChartsTheme(); }
+function toggleA11yPanel() {
+  const p = document.getElementById('a11y-panel');
+  if (p) p.classList.toggle('show');
+}
+document.addEventListener('click', (e) => {
+  const p = document.getElementById('a11y-panel');
+  const fab = document.getElementById('a11y-fab');
+  if (p && p.classList.contains('show') && !p.contains(e.target) && e.target !== fab && !fab.contains(e.target)) {
+    p.classList.remove('show');
+  }
+});
+
+/* Re-renderiza o gráfico ativo quando muda contraste/daltonismo */
+function refreshChartsTheme() {
+  if (!state.dadosPrevisao) return;
+  const d = state.dadosPrevisao;
+  const active = document.querySelector('.tab-pane.active');
+  if (!active) return;
+  state.chartsRendered = new Set();
+  const id = active.id.replace('tab-', '');
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (id === 'principal')      { renderChartPrincipal(d); state.chartsRendered.add('principal'); }
+    else if (id === 'categorias'){ renderCategorias(d);     state.chartsRendered.add('categorias'); }
+    else if (id === 'tendencia') { renderChartTendencia(d); state.chartsRendered.add('tendencia'); }
+    else if (id === 'semana')    { renderChartSemana(d);    state.chartsRendered.add('semana'); }
+    else if (id === 'anual')     { renderChartAnual(d);     state.chartsRendered.add('anual'); }
+    else if (id === 'acuracia')  { renderAcuracia(d);       state.chartsRendered.add('acuracia'); }
+  }));
+}
+
+/* ── Topbar / sidebar (mobile) ── */
+function toggleSidebar(force) {
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('sidebar-overlay');
+  if (!sb) return;
+  const open = (force === undefined) ? !sb.classList.contains('open') : force;
+  sb.classList.toggle('open', open);
+  if (ov) ov.classList.toggle('show', open);
+}
+
+/* ── Tipo de gráfico da previsão principal ── */
+function setChartTipo(tipo, btn) {
+  state.chartTipoPrincipal = tipo;
+  document.querySelectorAll('#seg-principal .seg-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  if (state.dadosPrevisao) { renderChartPrincipal(state.dadosPrevisao); state.chartsRendered.add('principal'); }
+}
+
+/* ── Mostrar/ocultar senha ── */
+function toggleSenha(id, btn) {
+  const inp = document.getElementById(id);
+  if (!inp) return;
+  const show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  btn.setAttribute('aria-label', show ? 'Ocultar senha' : 'Mostrar senha');
+  btn.innerHTML = show
+    ? '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+    : '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>';
+}
+
+/* ── Força da senha (somente no cadastro) ── */
+function atualizarForcaSenha() {
+  if (!modoRegistro) return;
+  const senha = document.getElementById('inp-senha').value;
+  const box   = document.getElementById('pwd-strength');
+  const bars  = document.querySelectorAll('#pwd-strength .pwd-bar');
+  const txt   = document.getElementById('pwd-strength-txt');
+  if (!senha) { box.classList.remove('show'); return; }
+  box.classList.add('show');
+  let score = 0;
+  if (senha.length >= 8) score++;
+  if (/[A-Z]/.test(senha) && /[a-z]/.test(senha)) score++;
+  if (/\d/.test(senha)) score++;
+  if (/[^A-Za-z0-9]/.test(senha)) score++;
+  if (senha.length >= 12 && score >= 3) score = 4;
+  const niveis = [
+    { cor: 'var(--danger)',  txt: 'Muito fraca' },
+    { cor: 'var(--danger)',  txt: 'Fraca' },
+    { cor: 'var(--warn)',    txt: 'Razoável' },
+    { cor: 'var(--cyan)',    txt: 'Boa' },
+    { cor: 'var(--success)', txt: 'Forte' },
+  ];
+  const nv = niveis[score];
+  bars.forEach((b, i) => { b.style.background = i < score ? nv.cor : 'var(--surface3)'; });
+  txt.textContent = `Força: ${nv.txt}`;
+  txt.style.color = nv.cor;
+}
+
+/* ── Recuperar senha ── */
+function abrirRecuperar() {
+  setRecAlert('', '');
+  const m = document.getElementById('modal-recuperar');
+  const e = document.getElementById('rec-email');
+  if (e) e.value = document.getElementById('inp-email').value.trim();
+  if (m) m.classList.add('show');
+  if (e) setTimeout(() => e.focus(), 60);
+}
+function fecharRecuperar() { document.getElementById('modal-recuperar').classList.remove('show'); }
+function setRecAlert(msg, type) {
+  const el = document.getElementById('rec-alert');
+  el.textContent = msg;
+  el.className = 'auth-alert' + (type ? ' ' + type : '');
+  el.style.display = msg ? 'block' : 'none';
+}
+function enviarRecuperacao() {
+  const email = document.getElementById('rec-email').value.trim();
+  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { setRecAlert('Informe um e-mail válido.', 'error'); return; }
+  // Mensagem neutra (não revela se o e-mail existe) e honesta quanto ao envio.
+  setRecAlert('Pedido registrado. Se houver uma conta com este e-mail, você receberá as instruções. Caso o envio automático não esteja configurado neste ambiente, contate o administrador do sistema.', 'success');
+}
 
 /* ── HTTP helper com JWT ── */
 async function authFetch(url, options = {}) {
@@ -981,6 +1498,7 @@ function navTo(page) {
   if (page === 'dashboard') carregarDashboard();
   if (page === 'dados')   { carregarTabelaArquivos(); carregarVendasManuais(); carregarVendasDatalist(); carregarRaizesSync(); _restaurarAutoSync(); }
   if (page === 'previsao')  carregarArquivosSelect();
+  toggleSidebar(false);
 }
 
 /* ── Auth ── */
@@ -989,10 +1507,16 @@ let modoRegistro = false;
 function toggleAuthMode() {
   modoRegistro = !modoRegistro;
   document.getElementById('auth-title').textContent       = modoRegistro ? 'Criar nova conta' : 'Entrar na conta';
+  document.getElementById('auth-sub').textContent         = modoRegistro ? 'Cadastre-se para começar a usar o Visia.' : 'Acesse o painel da sua empresa.';
   document.getElementById('btn-auth').textContent         = modoRegistro ? 'Criar conta' : 'Entrar';
   document.getElementById('auth-toggle-text').textContent = modoRegistro ? 'Já tem conta?' : 'Não tem conta?';
   document.getElementById('auth-toggle-link').textContent = modoRegistro ? ' Fazer login' : ' Criar conta';
   document.getElementById('field-nome').style.display     = modoRegistro ? 'block' : 'none';
+  document.getElementById('field-confirma').style.display = modoRegistro ? 'block' : 'none';
+  document.getElementById('auth-forgot').style.display    = modoRegistro ? 'none' : 'block';
+  document.getElementById('inp-senha').setAttribute('autocomplete', modoRegistro ? 'new-password' : 'current-password');
+  if (!modoRegistro) document.getElementById('pwd-strength').classList.remove('show');
+  else atualizarForcaSenha();
   setAuthAlert('', '');
 }
 
@@ -1024,10 +1548,14 @@ async function entrar() {
 }
 
 async function cadastrar() {
-  const nome  = document.getElementById('inp-nome').value.trim();
-  const email = document.getElementById('inp-email').value.trim();
-  const senha = document.getElementById('inp-senha').value;
+  const nome     = document.getElementById('inp-nome').value.trim();
+  const email    = document.getElementById('inp-email').value.trim();
+  const senha    = document.getElementById('inp-senha').value;
+  const confirma = document.getElementById('inp-confirma').value;
   if (!nome || !email || !senha) { setAuthAlert('Preencha todos os campos.', 'error'); return; }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { setAuthAlert('Informe um e-mail válido.', 'error'); return; }
+  if (senha.length < 8) { setAuthAlert('A senha deve ter ao menos 8 caracteres.', 'error'); return; }
+  if (senha !== confirma) { setAuthAlert('As senhas não conferem.', 'error'); return; }
   document.getElementById('btn-auth').disabled = true;
   try {
     const r = await fetch('/auth/cadastro', {
@@ -1788,21 +2316,56 @@ function exportarCSV() {
   URL.revokeObjectURL(url);
 }
 
-/* ── Chart layout base ── */
-const LB = {
-  paper_bgcolor: '#141328', plot_bgcolor: '#0d0c1a',
-  font: { color: '#c8c6e8', family: 'Urbanist,sans-serif', size: 12 },
-  xaxis: { type: 'date', gridcolor: 'rgba(255,255,255,.06)', linecolor: 'rgba(255,255,255,.12)', tickfont: { size: 11, color: '#7a78a0' }, zeroline: false },
-  yaxis: { gridcolor: 'rgba(255,255,255,.06)', linecolor: 'rgba(255,255,255,.12)', tickprefix: 'R$ ', tickformat: ',.0f', zeroline: false, tickfont: { color: '#7a78a0' }, automargin: true },
-  hovermode: 'x unified',
-  hoverlabel: { bgcolor: '#1c1b38', font: { color: '#fff', family: 'Urbanist', size: 13 }, bordercolor: '#3a3860', namelength: -1 },
-  margin: { l: 88, r: 24, t: 48, b: 68 },
-  legend: { bgcolor: 'rgba(0,0,0,0)', orientation: 'h', y: -0.3, font: { size: 12, color: '#c8c6e8' }, itemsizing: 'constant' },
-};
+/* ── Chart layout base (theme-aware) ── */
+function _dark() { return document.documentElement.dataset.theme === 'dark'; }
+function buildLB() {
+  const d = _dark();
+  const grid = d ? 'rgba(255,255,255,.07)' : 'rgba(15,23,42,.07)';
+  const line = d ? 'rgba(255,255,255,.13)' : 'rgba(15,23,42,.15)';
+  const tick = d ? '#7a879c' : '#64748b';
+  const font = d ? '#aeb9cc' : '#475569';
+  const paper = d ? '#111a2c' : '#ffffff';
+  const plot  = d ? '#111a2c' : '#ffffff';
+  return {
+    paper_bgcolor: paper, plot_bgcolor: plot,
+    font: { color: font, family: 'Urbanist,sans-serif', size: 12 },
+    xaxis: { type: 'date', gridcolor: grid, linecolor: line, tickfont: { size: 11, color: tick }, zeroline: false },
+    yaxis: { gridcolor: grid, linecolor: line, tickprefix: 'R$ ', tickformat: ',.0f', zeroline: false, tickfont: { color: tick }, automargin: true },
+    hovermode: 'x unified',
+    hoverlabel: { bgcolor: d ? '#16213a' : '#ffffff', font: { color: d ? '#e9eef7' : '#0f172a', family: 'Urbanist', size: 13 }, bordercolor: d ? '#2c3a5a' : '#cbd5e1', namelength: -1 },
+    margin: { l: 88, r: 24, t: 48, b: 68 },
+    legend: { bgcolor: 'rgba(0,0,0,0)', orientation: 'h', y: -0.3, font: { size: 12, color: font }, itemsizing: 'constant' },
+  };
+}
+let LB = buildLB();
 const CFG = { responsive: true, displayModeBar: false };
+
+/* Elementos de UI dos gráficos que mudam com o tema (anotações, rangeselector, etc.) */
+function CU() {
+  const d = _dark();
+  return d
+    ? { anno: 'rgba(17,26,44,.92)', title: '#aeb9cc', zero: 'rgba(255,255,255,.22)', rangeBg: '#16213a', rangeActive: '#1d2a45', sliderBg: '#0e1525', sliderBorder: '#1f2b45', tick: '#7a879c', neutralLine: 'rgba(255,255,255,.35)', neutralMk: '#aeb9cc' }
+    : { anno: 'rgba(255,255,255,.92)', title: '#475569', zero: 'rgba(15,23,42,.25)', rangeBg: '#f1f5f9', rangeActive: '#e2e8f0', sliderBg: '#f8fafc', sliderBorder: '#e2e8f0', tick: '#64748b', neutralLine: 'rgba(15,23,42,.35)', neutralMk: '#475569' };
+}
+
+/* Paleta de cores das séries — troca para versão segura a daltônicos quando ativo (Okabe–Ito) */
+const PAL_NORMAL = ['#059669','#2563eb','#d97706','#0891b2','#7c3aed','#db2777','#dc2626','#0d9488','#65a30d','#ea580c'];
+const PAL_NORMAL_DK = ['#10b981','#60a5fa','#fbbf24','#38bdf8','#a78bfa','#f472b6','#f87171','#2dd4bf','#a3e635','#fb923c'];
+const PAL_CB     = ['#0072B2','#E69F00','#009E73','#CC79A7','#56B4E9','#D55E00','#882255','#117733','#332288','#AA4499'];
+function _cbOn() { return document.documentElement.dataset.cb === 'on'; }
+function CATPAL() { return _cbOn() ? PAL_CB : (_dark() ? PAL_NORMAL_DK : PAL_NORMAL); }
+/* Cores semânticas dos gráficos (daltônico-seguras e ajustadas por tema) */
+function CC() {
+  if (_cbOn()) return { accent:'#0072B2', success:'#0072B2', danger:'#D55E00', gold:'#E69F00', cyan:'#56B4E9', hist:'#E69F00', neutral:'#94a3b8' };
+  return _dark()
+    ? { accent:'#10b981', success:'#34d399', danger:'#f87171', gold:'#fbbf24', cyan:'#38bdf8', hist:'#fb923c', neutral:'#7a879c' }
+    : { accent:'#059669', success:'#059669', danger:'#dc2626', gold:'#ca8a04', cyan:'#0891b2', hist:'#ea580c', neutral:'#94a3b8' };
+}
 
 function renderChartPrincipal(d) {
   const fore = d.forecast, hist = d.historico;
+  const cc = CC(), cu = CU();
+  const tipo = state.chartTipoPrincipal || 'area';
   const shapes = [], annotations = [];
 
   /* só datas futuras (após o último ponto histórico) */
@@ -1811,15 +2374,15 @@ function renderChartPrincipal(d) {
 
   /* feriados só na janela de previsão futura */
   futFore.filter(f => f.is_holiday).forEach(f => {
-    shapes.push({ type: 'line', x0: f.ds, x1: f.ds, y0: 0, y1: 1, yref: 'paper', line: { color: 'rgba(255,208,96,.4)', width: 1.5, dash: 'dot' } });
-    annotations.push({ x: f.ds, y: 0.97, yref: 'paper', text: f.holiday_name, showarrow: false, textangle: -90, xanchor: 'left', yanchor: 'top', font: { color: '#ffd060', size: 10, family: 'Urbanist' }, bgcolor: 'rgba(13,12,26,.85)' });
+    shapes.push({ type: 'line', x0: f.ds, x1: f.ds, y0: 0, y1: 1, yref: 'paper', line: { color: hexToRgba(cc.gold, .45), width: 1.5, dash: 'dot' } });
+    annotations.push({ x: f.ds, y: 0.97, yref: 'paper', text: f.holiday_name, showarrow: false, textangle: -90, xanchor: 'left', yanchor: 'top', font: { color: cc.gold, size: 10, family: 'Urbanist' }, bgcolor: cu.anno });
   });
 
   /* linha divisória histórico → previsão */
   if (hist.length && futFore.length) {
-    shapes.push({ type: 'rect', x0: lastHistDs, x1: futFore[futFore.length - 1].ds, y0: 0, y1: 1, yref: 'paper', fillcolor: 'rgba(200,240,96,.03)', line: { width: 0 } });
-    shapes.push({ type: 'line', x0: lastHistDs, x1: lastHistDs, y0: 0, y1: 1, yref: 'paper', line: { color: 'rgba(200,240,96,.6)', width: 1.5, dash: 'dash' } });
-    annotations.push({ x: lastHistDs, y: 0.94, yref: 'paper', text: '▶ Previsão', showarrow: false, xanchor: 'left', yanchor: 'top', font: { color: '#c8f060', size: 10, family: 'Urbanist', weight: 700 }, bgcolor: 'rgba(13,12,26,.82)', borderpad: 3 });
+    shapes.push({ type: 'rect', x0: lastHistDs, x1: futFore[futFore.length - 1].ds, y0: 0, y1: 1, yref: 'paper', fillcolor: hexToRgba(cc.accent, .04), line: { width: 0 } });
+    shapes.push({ type: 'line', x0: lastHistDs, x1: lastHistDs, y0: 0, y1: 1, yref: 'paper', line: { color: hexToRgba(cc.accent, .55), width: 1.5, dash: 'dash' } });
+    annotations.push({ x: lastHistDs, y: 0.94, yref: 'paper', text: '▶ Previsão', showarrow: false, xanchor: 'left', yanchor: 'top', font: { color: cc.accent, size: 10, family: 'Urbanist', weight: 700 }, bgcolor: cu.anno, borderpad: 3 });
   }
 
   /* range padrão: 90 dias antes do último dado + toda a previsão futura */
@@ -1831,22 +2394,34 @@ function renderChartPrincipal(d) {
     xRange = [start.toISOString().split('T')[0], end.toISOString().split('T')[0]];
   }
 
-  const traces = [
-    /* banda de confiança — só futuro */
-    { x: futFore.map(f => f.ds), y: futFore.map(f => f.yhat_upper), mode: 'lines', line: { width: 0 }, showlegend: false, hoverinfo: 'skip' },
-    { x: futFore.map(f => f.ds), y: futFore.map(f => f.yhat_lower), mode: 'lines', line: { width: 0 }, fill: 'tonexty', fillcolor: 'rgba(200,240,96,.13)', name: 'Intervalo de Confiança', hovertemplate: 'Mín: R$ %{y:,.0f}<extra></extra>' },
-    /* linha de previsão — só futuro */
-    { x: futFore.map(f => f.ds), y: futFore.map(f => f.yhat), mode: 'lines+markers', name: 'Previsão (IA)', line: { color: '#c8f060', width: 4, shape: 'spline', smoothing: 0.6 }, marker: { color: '#c8f060', size: 7, opacity: 0.85, line: { color: 'rgba(200,240,96,.35)', width: 3 } }, hovertemplate: '<b>Previsão: R$ %{y:,.0f}</b><extra></extra>' },
-    /* histórico — linha sem marcadores */
-    { x: hist.map(h => h.ds), y: hist.map(h => h.y), mode: 'lines', name: 'Histórico Real', line: { color: '#ff8c42', width: 2, shape: 'linear' }, hovertemplate: '<b>Real: R$ %{y:,.0f}</b><extra></extra>' },
-  ];
+  const traces = [];
+  /* banda de confiança — só futuro (não exibe em modo barras) */
+  if (tipo !== 'barras') {
+    traces.push({ x: futFore.map(f => f.ds), y: futFore.map(f => f.yhat_upper), mode: 'lines', line: { width: 0 }, showlegend: false, hoverinfo: 'skip' });
+    traces.push({ x: futFore.map(f => f.ds), y: futFore.map(f => f.yhat_lower), mode: 'lines', line: { width: 0 }, fill: 'tonexty', fillcolor: hexToRgba(cc.accent, .13), name: 'Intervalo de Confiança', hovertemplate: 'Mín: R$ %{y:,.0f}<extra></extra>' });
+  }
+  /* série de previsão — formato conforme o tipo escolhido */
+  if (tipo === 'barras') {
+    traces.push({ x: futFore.map(f => f.ds), y: futFore.map(f => f.yhat), type: 'bar', name: 'Previsão (IA)', marker: { color: hexToRgba(cc.accent, .75), line: { color: cc.accent, width: 1 } }, hovertemplate: '<b>Previsão: R$ %{y:,.0f}</b><extra></extra>' });
+  } else if (tipo === 'pontos') {
+    traces.push({ x: futFore.map(f => f.ds), y: futFore.map(f => f.yhat), mode: 'markers', name: 'Previsão (IA)', marker: { color: cc.accent, size: 8, opacity: 0.9, line: { color: '#fff', width: 1 } }, hovertemplate: '<b>Previsão: R$ %{y:,.0f}</b><extra></extra>' });
+  } else {
+    /* linha ou área */
+    traces.push({ x: futFore.map(f => f.ds), y: futFore.map(f => f.yhat), mode: 'lines+markers', name: 'Previsão (IA)',
+      line: { color: cc.accent, width: tipo === 'area' ? 3 : 4, shape: 'spline', smoothing: 0.6 },
+      fill: tipo === 'area' ? 'tozeroy' : undefined, fillcolor: tipo === 'area' ? hexToRgba(cc.accent, .10) : undefined,
+      marker: { color: cc.accent, size: 6, opacity: 0.85, line: { color: hexToRgba(cc.accent, .35), width: 3 } },
+      hovertemplate: '<b>Previsão: R$ %{y:,.0f}</b><extra></extra>' });
+  }
+  /* histórico — linha sem marcadores */
+  traces.push({ x: hist.map(h => h.ds), y: hist.map(h => h.y), mode: 'lines', name: 'Histórico Real', line: { color: cc.hist, width: 2, shape: 'linear' }, hovertemplate: '<b>Real: R$ %{y:,.0f}</b><extra></extra>' });
 
   const quedas = futFore.filter(f => f.alert_type === 'queda');
-  if (quedas.length) traces.push({ x: quedas.map(f => f.ds), y: quedas.map(f => f.yhat), mode: 'markers', name: 'Alerta de Queda', cliponaxis: false, marker: { color: '#ff5272', size: 11, symbol: 'triangle-down', line: { color: '#fff', width: 1.5 } }, hovertemplate: '<b>⚠ Queda %{customdata}%</b><br>R$ %{y:,.0f}<extra>Queda</extra>', customdata: quedas.map(f => f.alert_pct) });
+  if (quedas.length) traces.push({ x: quedas.map(f => f.ds), y: quedas.map(f => f.yhat), mode: 'markers', name: 'Alerta de Queda', cliponaxis: false, marker: { color: cc.danger, size: 11, symbol: 'triangle-down', line: { color: '#fff', width: 1.5 } }, hovertemplate: '<b>⚠ Queda %{customdata}%</b><br>R$ %{y:,.0f}<extra>Queda</extra>', customdata: quedas.map(f => f.alert_pct) });
   const altas  = futFore.filter(f => f.alert_type === 'alta');
-  if (altas.length) traces.push({ x: altas.map(f => f.ds), y: altas.map(f => f.yhat), mode: 'markers', name: 'Pico de Vendas', cliponaxis: false, marker: { color: '#27c984', size: 11, symbol: 'triangle-up', line: { color: '#fff', width: 1.5 } }, hovertemplate: '<b>🔝 Alta +%{customdata}%</b><br>R$ %{y:,.0f}<extra>Pico</extra>', customdata: altas.map(f => Math.abs(f.alert_pct)) });
+  if (altas.length) traces.push({ x: altas.map(f => f.ds), y: altas.map(f => f.yhat), mode: 'markers', name: 'Pico de Vendas', cliponaxis: false, marker: { color: cc.success, size: 11, symbol: 'triangle-up', line: { color: '#fff', width: 1.5 } }, hovertemplate: '<b>🔝 Alta +%{customdata}%</b><br>R$ %{y:,.0f}<extra>Pico</extra>', customdata: altas.map(f => Math.abs(f.alert_pct)) });
   const ferias = futFore.filter(f => f.is_holiday);
-  if (ferias.length) traces.push({ x: ferias.map(f => f.ds), y: ferias.map(f => f.yhat), mode: 'markers', name: 'Feriado', marker: { color: '#ffd060', size: 12, symbol: 'diamond', line: { color: '#fff', width: 1.5 } }, hovertemplate: '🗓 %{customdata}<br>R$ %{y:,.0f}<extra>Feriado</extra>', customdata: ferias.map(f => f.holiday_name) });
+  if (ferias.length) traces.push({ x: ferias.map(f => f.ds), y: ferias.map(f => f.yhat), mode: 'markers', name: 'Feriado', marker: { color: cc.gold, size: 12, symbol: 'diamond', line: { color: '#fff', width: 1.5 } }, hovertemplate: '🗓 %{customdata}<br>R$ %{y:,.0f}<extra>Feriado</extra>', customdata: ferias.map(f => f.holiday_name) });
 
   Plotly.newPlot('chart-principal', traces, {
     ...LB,
@@ -1870,17 +2445,17 @@ function renderChartPrincipal(d) {
           { count: 1,   label: '1a',  step: 'year',  stepmode: 'backward' },
           { step: 'all', label: 'Tudo' }
         ],
-        bgcolor: '#1c1b38', activecolor: '#2e2c5a',
-        bordercolor: '#c8f060', borderwidth: 1,
-        font: { color: '#c8c6e8', size: 11, family: 'Urbanist' },
+        bgcolor: cu.rangeBg, activecolor: cu.rangeActive,
+        bordercolor: cc.accent, borderwidth: 1,
+        font: { color: cu.tick, size: 11, family: 'Urbanist' },
         x: 0.01, xanchor: 'left', y: 1.06, yanchor: 'bottom'
       },
       rangeslider: {
-        bgcolor: '#0d0c1a', bordercolor: '#2c2a50', borderwidth: 1, thickness: 0.07
+        bgcolor: cu.sliderBg, bordercolor: cu.sliderBorder, borderwidth: 1, thickness: 0.07
       }
     },
     shapes, annotations,
-    title: { text: `${esc(d.nome_arquivo)} — ${d.dias_previstos} dias de previsão`, font: { size: 12, color: '#7a78a0' }, x: 0.5, xanchor: 'center', y: 1.02, yanchor: 'bottom' }
+    title: { text: `${esc(d.nome_arquivo)} — ${d.dias_previstos} dias de previsão`, font: { size: 12, color: cu.title }, x: 0.5, xanchor: 'center', y: 1.02, yanchor: 'bottom' }
   }, CFG);
 }
 
@@ -1891,18 +2466,19 @@ function renderChartTendencia(d) {
   const histTend = tend.filter(t => t.ds <= corte);
   const prevTend = tend.filter(t => t.ds > corte);
 
+  const cc = CC(), cu = CU();
   const shapes = [], annotations = [];
   const cps = d.changepoints || [];
   cps.forEach(cp => {
     const isAcc = cp.tipo === 'aceleracao';
-    shapes.push({ type: 'line', x0: cp.ds, x1: cp.ds, y0: 0, y1: 1, yref: 'paper', line: { color: isAcc ? 'rgba(39,201,132,.55)' : 'rgba(255,82,114,.55)', width: 1.5, dash: 'dot' } });
-    annotations.push({ x: cp.ds, y: 0.96, yref: 'paper', text: isAcc ? '↗' : '↘', showarrow: false, textangle: 0, xanchor: 'center', yanchor: 'top', font: { color: isAcc ? '#27c984' : '#ff5272', size: 13, family: 'Urbanist' }, bgcolor: 'rgba(13,12,26,.82)', borderpad: 2 });
+    shapes.push({ type: 'line', x0: cp.ds, x1: cp.ds, y0: 0, y1: 1, yref: 'paper', line: { color: isAcc ? hexToRgba(cc.success, .55) : hexToRgba(cc.danger, .55), width: 1.5, dash: 'dot' } });
+    annotations.push({ x: cp.ds, y: 0.96, yref: 'paper', text: isAcc ? '↗' : '↘', showarrow: false, textangle: 0, xanchor: 'center', yanchor: 'top', font: { color: isAcc ? cc.success : cc.danger, size: 13, family: 'Urbanist' }, bgcolor: cu.anno, borderpad: 2 });
   });
 
   Plotly.newPlot('chart-tendencia', [
-    { x: histTend.map(t => t.ds), y: histTend.map(t => t.trend), mode: 'lines', name: 'Tendência (histórico)', line: { color: '#4fc3f7', width: 3.5, shape: 'spline', smoothing: 0.5 }, fill: 'tozeroy', fillcolor: 'rgba(79,195,247,.12)', hovertemplate: '<b>Histórico: R$ %{y:,.0f}</b><extra></extra>' },
-    { x: prevTend.map(t => t.ds), y: prevTend.map(t => t.trend), mode: 'lines', name: 'Tendência (previsão)', line: { color: '#c8f060', width: 3.5, dash: 'dash', shape: 'spline', smoothing: 0.5 }, fill: 'tozeroy', fillcolor: 'rgba(200,240,96,.08)', hovertemplate: '<b>Previsão: R$ %{y:,.0f}</b><extra></extra>' },
-  ], { ...LB, shapes, annotations, xaxis: { ...LB.xaxis, tickformat: '%d/%m/%y', tickangle: -30 }, title: { text: 'Componente de Tendência', font: { size: 14, color: '#ddd' }, x: 0.01 } }, CFG);
+    { x: histTend.map(t => t.ds), y: histTend.map(t => t.trend), mode: 'lines', name: 'Tendência (histórico)', line: { color: cc.cyan, width: 3.5, shape: 'spline', smoothing: 0.5 }, fill: 'tozeroy', fillcolor: hexToRgba(cc.cyan, .12), hovertemplate: '<b>Histórico: R$ %{y:,.0f}</b><extra></extra>' },
+    { x: prevTend.map(t => t.ds), y: prevTend.map(t => t.trend), mode: 'lines', name: 'Tendência (previsão)', line: { color: cc.accent, width: 3.5, dash: 'dash', shape: 'spline', smoothing: 0.5 }, fill: 'tozeroy', fillcolor: hexToRgba(cc.accent, .08), hovertemplate: '<b>Previsão: R$ %{y:,.0f}</b><extra></extra>' },
+  ], { ...LB, shapes, annotations, xaxis: { ...LB.xaxis, tickformat: '%d/%m/%y', tickangle: -30 }, title: { text: 'Componente de Tendência', font: { size: 14, color: cu.title }, x: 0.01 } }, CFG);
 
   // Renderizar lista de changepoints abaixo do gráfico
   const cpWrap = document.getElementById('cp-lista-wrap');
@@ -1929,24 +2505,25 @@ function renderChartTendencia(d) {
 function renderChartSemana(d) {
   const sem = d.componentes.semanal;
   if (!sem || !Object.keys(sem).length) { document.getElementById('chart-semana').innerHTML = '<p style="color:var(--text-muted);padding:40px;text-align:center">Histórico insuficiente para sazonalidade semanal.</p>'; return; }
+  const cc = CC(), cu = CU();
   const dias = Object.keys(sem), vals = Object.values(sem);
   const ymax = Math.max(...vals.map(Math.abs)) * 1.5;
   Plotly.newPlot('chart-semana', [{
     x: dias, y: vals, type: 'bar',
     marker: {
-      color: vals.map(v => v >= 0 ? '#27c984' : '#ff5272'),
-      line: { color: vals.map(v => v >= 0 ? 'rgba(39,201,132,.5)' : 'rgba(255,82,114,.5)'), width: 2 }
+      color: vals.map(v => v >= 0 ? cc.success : cc.danger),
+      line: { color: vals.map(v => v >= 0 ? hexToRgba(cc.success, .5) : hexToRgba(cc.danger, .5)), width: 2 }
     },
     text: vals.map(v => `R$ ${v >= 0 ? '+' : ''}${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`),
     textposition: 'outside',
-    textfont: { size: 11, color: vals.map(v => v >= 0 ? '#27c984' : '#ff5272'), family: 'Urbanist' },
+    textfont: { size: 11, color: vals.map(v => v >= 0 ? cc.success : cc.danger), family: 'Urbanist' },
     hovertemplate: '<b>%{x}</b><br>Efeito: R$ %{y:+,.2f}<extra></extra>',
     name: 'Efeito'
   }],
   { ...LB,
     xaxis: { ...LB.xaxis, type: 'category' },
-    yaxis: { ...LB.yaxis, zeroline: true, zerolinecolor: 'rgba(255,255,255,.3)', zerolinewidth: 2, title: { text: 'Efeito nas Vendas (R$)', font: { size: 12 } }, range: [-ymax, ymax] },
-    title: { text: 'Efeito por Dia da Semana', font: { size: 14, color: '#ddd' }, x: 0.01 },
+    yaxis: { ...LB.yaxis, zeroline: true, zerolinecolor: cu.zero, zerolinewidth: 2, title: { text: 'Efeito nas Vendas (R$)', font: { size: 12 } }, range: [-ymax, ymax] },
+    title: { text: 'Efeito por Dia da Semana', font: { size: 14, color: cu.title }, x: 0.01 },
     showlegend: false, bargap: 0.35
   }, CFG);
 }
@@ -1954,18 +2531,19 @@ function renderChartSemana(d) {
 function renderChartAnual(d) {
   const anual = d.componentes.anual;
   if (!anual || !anual.length) { document.getElementById('chart-anual').innerHTML = '<p style="color:var(--text-muted);padding:40px;text-align:center">Histórico de pelo menos 1 ano necessário para sazonalidade anual.</p>'; return; }
+  const cc = CC(), cu = CU();
   const meses = anual.map(a => a.mes), vals = anual.map(a => a.valor);
   const ymax = Math.max(...vals.map(Math.abs)) * 1.5;
   Plotly.newPlot('chart-anual', [
     { x: meses, y: vals, type: 'bar',
-      marker: { color: vals.map(v => v >= 0 ? '#c8f060' : '#ff5272'), line: { color: vals.map(v => v >= 0 ? 'rgba(200,240,96,.4)' : 'rgba(255,82,114,.4)'), width: 2 } },
+      marker: { color: vals.map(v => v >= 0 ? cc.accent : cc.danger), line: { color: vals.map(v => v >= 0 ? hexToRgba(cc.accent, .4) : hexToRgba(cc.danger, .4)), width: 2 } },
       text: vals.map(v => `R$ ${v >= 0 ? '+' : ''}${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`),
       textposition: 'outside',
-      textfont: { size: 10, color: vals.map(v => v >= 0 ? '#c8f060' : '#ff5272'), family: 'Urbanist' },
+      textfont: { size: 10, color: vals.map(v => v >= 0 ? cc.accent : cc.danger), family: 'Urbanist' },
       hovertemplate: '<b>%{x}</b><br>Efeito: R$ %{y:+,.2f}<extra></extra>',
       name: 'Efeito mensal' },
-    { x: meses, y: vals, type: 'scatter', mode: 'lines+markers', line: { color: 'rgba(255,255,255,.7)', width: 2.5, shape: 'spline', smoothing: 0.4 }, marker: { color: '#fff', size: 8, line: { color: vals.map(v => v >= 0 ? '#c8f060' : '#ff5272'), width: 2.5 } }, hoverinfo: 'skip', showlegend: false },
-  ], { ...LB, xaxis: { ...LB.xaxis, type: 'category' }, yaxis: { ...LB.yaxis, zeroline: true, zerolinecolor: 'rgba(255,255,255,.3)', zerolinewidth: 2, title: { text: 'Efeito (R$)', font: { size: 12 } }, range: [-ymax, ymax] }, title: { text: 'Sazonalidade Anual por Mês', font: { size: 14, color: '#ddd' }, x: 0.01 }, showlegend: false, bargap: 0.25 }, CFG);
+    { x: meses, y: vals, type: 'scatter', mode: 'lines+markers', line: { color: cu.neutralLine, width: 2.5, shape: 'spline', smoothing: 0.4 }, marker: { color: cu.neutralMk, size: 8, line: { color: vals.map(v => v >= 0 ? cc.accent : cc.danger), width: 2.5 } }, hoverinfo: 'skip', showlegend: false },
+  ], { ...LB, xaxis: { ...LB.xaxis, type: 'category' }, yaxis: { ...LB.yaxis, zeroline: true, zerolinecolor: cu.zero, zerolinewidth: 2, title: { text: 'Efeito (R$)', font: { size: 12 } }, range: [-ymax, ymax] }, title: { text: 'Sazonalidade Anual por Mês', font: { size: 14, color: cu.title }, x: 0.01 }, showlegend: false, bargap: 0.25 }, CFG);
 }
 
 function renderTabela(d) {
@@ -2035,7 +2613,8 @@ function filtrarTabelaCategoria() {
 }
 
 /* ── Categorias / Produtos ── */
-const CAT_CORES = ['#c8f060','#4fc3f7','#ff8c42','#27c984','#ffd060','#b388ff','#ff5272','#5ce1e6','#f78fb3','#a0e57c'];
+/* Paleta de categorias = paleta de séries (respeita modo daltônico) */
+const CAT_CORES = PAL_NORMAL;
 
 async function renderCategorias(d) {
   const el = document.getElementById('categorias-content');
@@ -2093,7 +2672,7 @@ async function renderCategorias(d) {
 
     // ── Cards por categoria ──
     const cardsHtml = cats.map((c, i) => {
-      const cor = CAT_CORES[i % CAT_CORES.length];
+      const cor = CATPAL()[i % CATPAL().length];
       const t   = c.tendencia;
       const trendCls = t === 'alta' ? 'up' : t === 'queda' ? 'down' : 'flat';
       const trendIco = t === 'alta' ? '▲' : t === 'queda' ? '▼' : '▬';
@@ -2180,7 +2759,7 @@ function renderChartCategorias(cats) {
     return;
   }
   const traces = comDados.map((c, i) => {
-    const cor = CAT_CORES[cats.indexOf(c) % CAT_CORES.length];
+    const cor = CATPAL()[cats.indexOf(c) % CATPAL().length];
     return {
       x: c.forecast.map(f => f.ds),
       y: c.forecast.map(f => f.yhat),
@@ -2203,7 +2782,7 @@ function renderSparkline(c, i) {
   const el = document.getElementById(elId);
   if (!el) return;
   if (!c.forecast || !c.forecast.length) { el.style.display = 'none'; return; }
-  const cor = CAT_CORES[i % CAT_CORES.length];
+  const cor = CATPAL()[i % CATPAL().length];
   Plotly.newPlot(elId, [{
     x: c.forecast.map(f => f.ds),
     y: c.forecast.map(f => f.yhat),
@@ -2377,31 +2956,32 @@ function renderAcuracia(d) {
     </div>`;
 
   if (ac.horizonte && ac.horizonte.length > 1) {
+    const cc = CC(), cu = CU();
     const hd = ac.horizonte;
     Plotly.newPlot('chart-acuracia-horizonte', [
       {
         x: hd.map(h => h.dia), y: hd.map(h => h.mape),
         mode: 'lines+markers', name: 'MAPE (%)',
-        line: { color: '#4fc3f7', width: 3, shape: 'spline', smoothing: 0.4 },
-        marker: { color: '#4fc3f7', size: 6 },
+        line: { color: cc.cyan, width: 3, shape: 'spline', smoothing: 0.4 },
+        marker: { color: cc.cyan, size: 6 },
         hovertemplate: '<b>%{x} dias à frente</b><br>MAPE: %{y:.1f}%<extra></extra>',
         yaxis: 'y',
       },
       {
         x: hd.map(h => h.dia), y: hd.map(h => h.mae),
         mode: 'lines+markers', name: 'MAE (R$)',
-        line: { color: '#c8f060', width: 2.5, dash: 'dot', shape: 'spline', smoothing: 0.4 },
-        marker: { color: '#c8f060', size: 5 },
+        line: { color: cc.accent, width: 2.5, dash: 'dot', shape: 'spline', smoothing: 0.4 },
+        marker: { color: cc.accent, size: 5 },
         hovertemplate: '<b>%{x} dias à frente</b><br>MAE: R$ %{y:,.0f}<extra></extra>',
         yaxis: 'y2',
       },
     ], {
       ...LB,
       yaxis:  { ...LB.yaxis, tickprefix: '', ticksuffix: '%', title: { text: 'MAPE (%)', font: { size: 12 } }, zeroline: false },
-      yaxis2: { title: { text: 'MAE (R$)', font: { size: 12 } }, overlaying: 'y', side: 'right', showgrid: false, tickprefix: 'R$ ', zeroline: false, tickfont: { color: '#7a78a0' } },
+      yaxis2: { title: { text: 'MAE (R$)', font: { size: 12 } }, overlaying: 'y', side: 'right', showgrid: false, tickprefix: 'R$ ', zeroline: false, tickfont: { color: cu.tick } },
       legend: { ...LB.legend, y: -0.3 },
       margin: { ...LB.margin, t: 32, b: 60 },
-      title:  { text: 'Erro por Horizonte de Previsão', font: { size: 13, color: '#ddd' }, x: 0.5, xanchor: 'center' },
+      title:  { text: 'Erro por Horizonte de Previsão', font: { size: 13, color: cu.title }, x: 0.5, xanchor: 'center' },
       xaxis:  { ...LB.xaxis, type: 'linear', title: { text: 'Dias à frente', font: { size: 11 } } },
     }, CFG);
   } else {

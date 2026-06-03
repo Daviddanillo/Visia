@@ -38,5 +38,6 @@ Thumbs.db
 # Logs
 *.log
 
-# Flag de instalacao do Stan (gerado pelo iniciar.bat)
+# Flags geradas pelo iniciar.bat
 .stan_ok
+.visia_deps_ok
