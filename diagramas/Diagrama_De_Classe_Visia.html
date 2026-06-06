@@ -1,0 +1,182 @@
+
+<style>
+#wrap2 { padding: 1rem 0; }
+.legend2 { display:flex; gap:20px; flex-wrap:wrap; margin-bottom:14px; }
+.leg2 { display:flex; align-items:center; gap:7px; font-size:12px; color:var(--color-text-secondary); }
+.dot2 { width:11px; height:11px; border-radius:3px; flex-shrink:0; }
+#cd2 { overflow-x:auto; }
+#cd2 svg { min-width:700px; height:auto; display:block; }
+</style>
+<div id="wrap2">
+  <div class="legend2">
+    <div class="leg2"><div class="dot2" style="background:#534AB7"></div>Modelos ORM</div>
+    <div class="leg2"><div class="dot2" style="background:#0F6E56"></div>Serviços</div>
+    <div class="leg2"><div class="dot2" style="background:#993C1D"></div>Routers</div>
+    <div class="leg2" style="margin-left:auto;font-size:11px;opacity:.6">Role horizontalmente se necessário</div>
+  </div>
+  <div id="cd2"><p style="color:var(--color-text-tertiary);font-size:13px">Renderizando…</p></div>
+</div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+await document.fonts.ready;
+
+const mFill  = dark ? '#3C3489' : '#EEEDFE';
+const mStroke= dark ? '#AFA9EC' : '#534AB7';
+const mText  = dark ? '#CECBF6' : '#26215C';
+const sFill  = dark ? '#085041' : '#E1F5EE';
+const sStroke= dark ? '#5DCAA5' : '#0F6E56';
+const sText  = dark ? '#9FE1CB' : '#04342C';
+const rFill  = dark ? '#712B13' : '#FAECE7';
+const rStroke= dark ? '#F0997B' : '#993C1D';
+const rText  = dark ? '#F5C4B3' : '#4A1B0C';
+
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  fontFamily: '"Anthropic Sans", sans-serif',
+  themeVariables: {
+    darkMode: dark,
+    fontSize: '13px',
+    fontFamily: '"Anthropic Sans", sans-serif',
+    background: 'transparent',
+    mainBkg: dark ? '#2C2C2A' : '#ffffff',
+    lineColor: dark ? '#888780' : '#5F5E5A',
+    textColor: dark ? '#D3D1C7' : '#2C2C2A',
+    nodeBorder: dark ? '#B4B2A9' : '#888780',
+    edgeLabelBackground: dark ? '#2C2C2A' : '#F1EFE8',
+    classText: dark ? '#D3D1C7' : '#2C2C2A',
+    attributeBackgroundColorEven: dark ? '#444441' : '#F1EFE8',
+    attributeBackgroundColorOdd: dark ? '#2C2C2A' : '#ffffff',
+  },
+});
+
+const src = `classDiagram
+    direction TB
+
+    class Usuario {
+        +int id
+        +str nome
+        +str email
+        +str senha_hash
+        +list~Venda~ vendas
+        +list~UploadArquivo~ arquivos
+        +list~Pasta~ pastas
+        +list~RaizSincronizada~ raizes_sincronizadas
+    }
+    class Pasta {
+        +int id
+        +str nome
+        +int parent_id
+        +int usuario_id
+        +str caminho_origem
+        +Pasta parent
+        +list~Pasta~ subpastas
+        +list~UploadArquivo~ arquivos
+    }
+    class UploadArquivo {
+        +int id
+        +str nome_arquivo
+        +date data_upload
+        +int usuario_id
+        +int pasta_id
+        +str caminho_origem
+        +float mtime_origem
+        +list~Venda~ vendas
+    }
+    class Venda {
+        +int id
+        +date data_venda
+        +float valor
+        +str categoria
+        +int usuario_id
+        +int arquivo_id
+    }
+    class RaizSincronizada {
+        +int id
+        +str caminho
+        +int usuario_id
+        +int pasta_id
+        +datetime ultima_sincronizacao
+    }
+    class PredictorService {
+        service
+        +gerar_previsao(usuario_id, dias) dict
+        +gerar_previsao_categorias(usuario_id, dias) dict
+        -_construir_feriados(anos) DataFrame
+        -_calcular_cv(model, df) dict
+        -_extrair_changepoints(model) list
+    }
+    class SecurityService {
+        service
+        +hash_senha(senha) str
+        +verificar_senha(senha, hash) bool
+        +criar_token(dados) str
+        +get_current_user(credentials) Usuario
+    }
+    class AuthRouter {
+        router
+        +cadastrar()
+        +login()
+        +obter_perfil()
+        +atualizar_perfil()
+        +deletar_conta()
+    }
+    class VendaRouter {
+        router
+        +importar_csv()
+        +CRUD_vendas()
+        +CRUD_pastas()
+        +CRUD_arquivos()
+        +sincronizacao()
+        +obter_stats()
+    }
+    class PredictRouter {
+        router
+        +prever_vendas()
+        +prever_por_categoria()
+    }
+
+    classDef model fill:${mFill},stroke:${mStroke},color:${mText},stroke-width:1.5px
+    classDef service fill:${sFill},stroke:${sStroke},color:${sText},stroke-width:1.5px
+    classDef router fill:${rFill},stroke:${rStroke},color:${rText},stroke-width:1.5px
+
+    cssClass "Usuario" model
+    cssClass "Pasta" model
+    cssClass "UploadArquivo" model
+    cssClass "Venda" model
+    cssClass "RaizSincronizada" model
+    cssClass "PredictorService" service
+    cssClass "SecurityService" service
+    cssClass "AuthRouter" router
+    cssClass "VendaRouter" router
+    cssClass "PredictRouter" router
+
+    Usuario "1" --> "0..*" Venda : possui
+    Usuario "1" --> "0..*" UploadArquivo : envia
+    Usuario "1" --> "0..*" Pasta : organiza
+    Usuario "1" --> "0..*" RaizSincronizada : monitora
+    Pasta "1" --> "0..*" Pasta : subpastas
+    Pasta "1" --> "0..*" UploadArquivo : contem
+    UploadArquivo "1" --> "0..*" Venda : agrupa
+    RaizSincronizada "1" --> "0..1" Pasta : espelha
+    AuthRouter ..> SecurityService : usa
+    AuthRouter ..> Usuario : CRUD
+    VendaRouter ..> Venda : CRUD
+    VendaRouter ..> Pasta : CRUD
+    VendaRouter ..> UploadArquivo : CRUD
+    VendaRouter ..> RaizSincronizada : CRUD
+    PredictRouter ..> PredictorService : delega
+    PredictorService ..> Venda : consulta
+`;
+
+try {
+  const { svg } = await mermaid.render('cd2-svg', src);
+  document.getElementById('cd2').innerHTML = svg;
+  const svgEl = document.querySelector('#cd2 svg');
+  if (svgEl) { svgEl.removeAttribute('height'); svgEl.style.height = 'auto'; }
+} catch(e) {
+  document.getElementById('cd2').innerHTML = `<p style="color:var(--color-text-danger);font-size:13px">Erro: ${e.message}</p>`;
+  console.error(e);
+}
+</script>
