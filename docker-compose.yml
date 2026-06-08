@@ -1,19 +1,19 @@
-version: '3.8'
-
 services:
-  db:
-    image: postgres:15-alpine
-    container_name: visia_postgres_db
+  app:
+    build: .
+    container_name: visia_app
     restart: always
+    env_file:
+      - .env
     environment:
-      # Credenciais vêm de variáveis de ambiente / .env (nunca versione senhas).
-      POSTGRES_USER: ${POSTGRES_USER:-admin}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
-      POSTGRES_DB: ${POSTGRES_DB:-visia_db}
+      # O banco SQLite fica em /data (volume), não dentro do container efêmero.
+      # Quatro barras = caminho absoluto: /data/dados.db
+      DATABASE_URL: sqlite:////data/dados.db
     ports:
-      - "5432:5432"
+      - "8000:8000"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # Persiste o arquivo SQLite entre recriações do container.
+      - sqlite_data:/data
 
 volumes:
-  postgres_data:
+  sqlite_data:

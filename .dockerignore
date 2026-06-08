@@ -1,0 +1,19 @@
+# Ambiente e caches locais — não devem ir para a imagem.
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Bancos locais: o SQLite real vive no volume Docker (/data), não na imagem.
+*.db
+*.db-wal
+*.db-shm
+test.db
+
+# Segredos e metadados.
+.env
+.git/
+.gitignore
+.github/
