@@ -10,8 +10,8 @@ class UsuarioCriar(BaseModel):
     @field_validator("senha")
     @classmethod
     def senha_minima(cls, v: str) -> str:
-        if len(v) < 6:
-            raise ValueError("Senha deve ter ao menos 6 caracteres.")
+        if len(v) < 8:
+            raise ValueError("Senha deve ter ao menos 8 caracteres.")
         return v
 
 
