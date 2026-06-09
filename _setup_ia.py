@@ -1,7 +1,4 @@
-"""
-Garante que o Prophet (motor de IA) esta configurado corretamente.
-Executado automaticamente pelo iniciar.bat antes de subir o servidor.
-"""
+
 import shutil
 import pathlib
 import sys

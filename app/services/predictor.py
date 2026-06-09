@@ -207,7 +207,6 @@ def gerar_previsao(
     arquivo_id: Optional[int] = None,
     categoria: Optional[str] = None,
 ) -> dict:
-    # ---- Carregar dados do banco ----
     query = db.query(Venda).filter(Venda.usuario_id == usuario_id)
     if arquivo_id:
         query = query.filter(Venda.arquivo_id == arquivo_id)
@@ -225,16 +224,14 @@ def gerar_previsao(
 
     df = pd.DataFrame([{"ds": v.data_venda, "y": float(v.valor)} for v in vendas])
     df["ds"] = pd.to_datetime(df["ds"])
-    # Agrupa por dia (suma múltiplas vendas no mesmo dia)
     df = df.groupby("ds")["y"].sum().reset_index().sort_values("ds")
 
-    # ---- Construir feriados ----
     min_ano = df["ds"].dt.year.min()
     max_ano = (datetime.now() + timedelta(days=dias + 366)).year
     anos = list(range(min_ano, max_ano + 1))
     holidays_df, feriados_lookup = _construir_feriados(anos)
 
-    # ---- Treinar Prophet ----
+    # Parâmetros do Prophet:
     # - yearly_seasonality="auto" : ativa automaticamente se tiver ≥ 1 ano de dados
     # - weekly_seasonality="auto" : ativa automaticamente se tiver ≥ 2 semanas
     # - holidays=holidays_df      : feriados como regressores reais (afetam o yhat)
@@ -257,13 +254,9 @@ def gerar_previsao(
     future   = model.make_future_dataframe(periods=dias, freq="D")
     forecast = model.predict(future)
 
-    # ---- Cross-validation e acurácia ----
     acuracia = _calcular_cv(model, df, dias)
-
-    # ---- Changepoints significativos ----
     changepoints = _extrair_changepoints(model)
 
-    # ---- Componente de tendência (histórico + futuro) ----
     tendencia = [
         {
             "ds":    row["ds"].strftime("%Y-%m-%d"),
@@ -273,7 +266,6 @@ def gerar_previsao(
         for _, row in forecast.iterrows()
     ]
 
-    # ---- Sazonalidade semanal ----
     dias_semana_full = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]
     hist_fc = forecast[forecast["ds"] <= df["ds"].max()].copy()
 
@@ -294,7 +286,6 @@ def gerar_previsao(
             for i, nome in enumerate(dias_semana_full)
         }
 
-    # ---- Sazonalidade anual ----
     meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
              "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
 
@@ -313,7 +304,6 @@ def gerar_previsao(
             for i, nome in enumerate(meses, 1)
         ]
 
-    # ---- Histórico ----
     historico = [
         {
             "ds":    r["ds"].strftime("%Y-%m-%d"),
@@ -323,7 +313,6 @@ def gerar_previsao(
         for _, r in df.iterrows()
     ]
 
-    # ---- Previsão futura ----
     future_fc = forecast[forecast["ds"] > df["ds"].max()].copy()
 
     dias_semana_short = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
@@ -413,7 +402,6 @@ def gerar_previsao(
                     forecast_list[i]["alert_type"] = None
                     forecast_list[i]["alert_pct"] = None
 
-    # ---- Nome do arquivo ----
     nome_arquivo = "Todos os dados"
     if arquivo_id:
         arq = db.query(UploadArquivo).filter(UploadArquivo.id == arquivo_id).first()
@@ -422,7 +410,6 @@ def gerar_previsao(
     if categoria:
         nome_arquivo = f"{nome_arquivo} · {categoria}"
 
-    # ---- Resumo ----
     yhats            = [f["yhat"] for f in forecast_list]
     feriados_periodo = [f for f in forecast_list if f["is_holiday"]]
     quedas           = [f for f in forecast_list if f["alert_type"] == "queda"]

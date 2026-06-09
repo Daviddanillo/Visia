@@ -21,11 +21,6 @@ Base.metadata.create_all(bind=engine)
 
 
 def _migrar_coluna_categoria() -> None:
-    """Adiciona a coluna `categoria` à tabela `vendas` em bancos já existentes.
-
-    `create_all` não altera tabelas existentes, então fazemos um ALTER TABLE
-    idempotente para manter compatibilidade com bancos antigos (dados.db).
-    """
     try:
         inspetor = inspect(engine)
         colunas = {c["name"] for c in inspetor.get_columns("vendas")}
