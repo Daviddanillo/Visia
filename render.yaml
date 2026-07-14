@@ -1,0 +1,28 @@
+# Blueprint do Render — https://render.com/docs/blueprint-spec
+# Sobe a aplicação inteira (API FastAPI + frontend estático servido por ela)
+# como um único Web Service em Docker. O banco fica no Neon (fora do Render).
+#
+# Após criar o serviço, preencha no painel do Render (Environment):
+#   DATABASE_URL — connection string do Neon, ex.:
+#     postgresql://usuario:senha@ep-xxx-pooler.us-east-2.aws.neon.tech/visia_db?sslmode=require
+#     (prefira o endpoint "-pooler" do Neon; a app também aceita postgres:// e
+#      acrescenta sslmode=require sozinha se faltar)
+services:
+  - type: web
+    name: visia
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false # segredo — colar manualmente no painel (URL do Neon)
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "60"
+      # Frontend e API são servidos pela mesma origem no Render; ajuste se
+      # publicar o frontend em outro domínio.
+      - key: ALLOWED_ORIGINS
+        value: https://visia.onrender.com
